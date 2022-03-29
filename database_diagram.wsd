@@ -18,7 +18,14 @@ object "**Client**" as Client {
     geological_address
 }
 
-object "**Distribution Vehicles**" as DistributionVehicles {
+object "**Driver**" as Driver {
+    driver_name
+    driver_document_id
+    salary
+    hiring_date
+}
+ 
+object "**Vehicle**" as Vehicle {
     car_brand
     car_plaque
     type_of_gas
@@ -62,10 +69,11 @@ object "**Supplier**" as Supplier {
 }
 
 BusinessStock .> Supplier : "**get stocked**"
+Vehicle  <. Driver : "**use**"
 Client " ( 1...* ) " ..> "( 0...* )" Order : "**make**"
 Supplier " ( * ) " --> " ( 1...* ) " Product : "**have**"
 Product " ( 0...* ) " <-- BusinessStock : "**have**" 
 Order .> BusinessStock : "**get products**"
-DistributionVehicles -> "( 0...* )" MaintenanceLog : \t**have**\t >
+Vehicle -> "( 0...* )" MaintenanceLog : \t**have**\t >
 
 @enduml
