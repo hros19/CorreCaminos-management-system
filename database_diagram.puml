@@ -7,7 +7,7 @@ skinparam TitleFontColor white
 
 title Conceptual Model
 
-object "**Cliente**" as Client {
+object "**Client**" as Client {
     business_name
     business_type
     business_representative
