@@ -1,0 +1,71 @@
+@startuml Conceptual Database Model
+
+skinparam TitleBorderRoundCorner 15
+skinparam TitleBorderThickness 3
+skinparam TitleBackgroundColor gray
+skinparam TitleFontColor white
+
+title Conceptual Model
+
+object "**Client**" as Client {
+    business_name
+    business_type
+    business_representative
+    phone_number
+    email
+    zone
+    formal_address
+    geological_address
+}
+
+object "**Distribution Vehicles**" as DistributionVehicles {
+    car_brand
+    car_plaque
+    type_of_gas
+    purchase_date
+    tank_capacity
+}
+
+object "**Maintenance log**" as MaintenanceLog {
+    maintenance_type
+    maintenance_day
+}
+
+object "**Business Stock**" as BusinessStock {
+    <Product> 
+    <Quantity>
+}
+
+object "**Order**" as Order {
+    <Client>
+    <Product> 
+    <Quantity>
+    <Status>
+}
+
+object "**Product**" as Product {
+    product_name
+    supplier
+    price
+    quantity
+    category_name
+    subcategory_name
+    is_available
+}
+
+object "**Supplier**" as Supplier {
+    supplier_name
+    formal_address
+    phone_number
+    email
+    have_delivery
+}
+
+BusinessStock .> Supplier : "**get stocked**"
+Client " ( 1...* ) " ..> "( 0...* )" Order : "**make**"
+Supplier " ( * ) " --> " ( 1...* ) " Product : "**have**"
+Product " ( 0...* ) " <-- BusinessStock : "**have**" 
+Order .> BusinessStock : "**get products**"
+DistributionVehicles -> "( 0...* )" MaintenanceLog : \t**have**\t >
+
+@enduml
