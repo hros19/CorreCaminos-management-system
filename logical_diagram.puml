@@ -1,7 +1,7 @@
 @startuml Logical Database Model
 
 skinparam HeaderFontColor FireBrick
-skinparam BackgroundColor LightSteelBlue
+skinparam BackgroundColor DarkSlateGray
 
 !theme reddress-darkblue
 
