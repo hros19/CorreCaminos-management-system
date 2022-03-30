@@ -1,11 +1,14 @@
 @startuml Conceptual Database Model
 
-skinparam TitleBorderRoundCorner 15
-skinparam TitleBorderThickness 3
-skinparam TitleBackgroundColor gray
-skinparam TitleFontColor white
+skinparam BackgroundColor transparent
 
-title Conceptual Model
+skinparam HeaderFontColor white
+skinparam HeaderFontSize 15
+
+skinparam ObjectBackgroundColor white
+
+
+header conceptual model
 
 object "**Client**" as Client {
     business_name
