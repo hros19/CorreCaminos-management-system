@@ -1,0 +1,112 @@
+@startuml Logical Database Model
+
+skinparam HeaderFontColor FireBrick
+skinparam BackgroundColor LightSteelBlue
+
+!theme reddress-darkblue
+
+header Logical Model
+
+entity "Client" as Client {
+  **client_id** : integer <<generated>>
+  --
+  *business_name : text
+  *business_type : text
+  *business_representative: text
+  *phone_number: integer
+  *email: text
+  *zone: text
+  *formal_address: text
+  *geological_address: point
+}
+
+entity "Vehicle" as Vehicle {
+    **vehicle_id**: number <<generated>>
+    --
+    *car_brand: text
+    *car_plaque: integer
+    type_of_gas: text = 'premium'
+    *purchase_date: date
+    tank_capacity: float = '15.5' 
+}
+
+entity "MaintenanceLog" as MaintenanceLog {
+    **maintenance_id**: integer <<generated>>
+    --
+    *maintenance_type: text
+    *maintenenace_day: date = now()
+}
+
+entity "Driver" as Driver {
+    **driver_id**: integer <<generated>>
+    //vehicle_id//: <<FK: Vehicle.vehicle_id>>
+    --
+    *driver_name: text
+    *driver_doc_id: integer
+    *salary: integer
+    *hiring_date: date = now()
+}
+
+entity "Order" as Order {
+    **order_id**: integer <<generated>>
+    //client_id//: <<FK Client.client_id>>
+    //product_id//: <<FK Produc.product_id>>
+    --
+    *quantity: integer
+    status: text = 'pending'
+}
+
+entity "Business Stock" as BusinessStock {
+    **//product_id//**: <<FK: Product.product_id>>
+    --
+    *quantity: integer
+}
+
+entity "Supplier" as Supplier {
+    **suplier_id**: integer <<generated>>
+    --
+    *supplier_name: text
+    *formal_address: text
+    *phone_number: integer
+    *email: text
+    *have_delivery: text {'Y', 'N'}
+}
+
+entity "Product" as Product {
+    **product_id**: integer <<generated>>
+    --
+    *product_name: text
+    *price: float
+    category_name: text = "ND"
+    subcategory_name: text = "ND"
+    is_available: text {'Y', 'N'} = 'Y'
+}
+
+entity "SupplierStock" as SupplierStock {
+    **supplier_stock_id**: integer <<generated>>
+    //supplier_id//: <<FK: Supplier.supplier_id>>
+    //product_id//: <<FK: Product.product_id>>
+    --
+}
+
+entity "SupplierOrder" as SupplierOrder {
+    **supplier_order_id**: integer <<generated>>
+    //supplier_id//: <<FK: Supplier.supplier_id>>
+    //product_id//: <<FK: Product.product_id>>
+    --
+    *quantity: integer
+    order_date: date = now()
+}
+
+Driver ||--|| Vehicle
+Vehicle ||--o{ MaintenanceLog
+Client ||--o{ Order
+Product ||--o{ Order
+Supplier ||--o{ SupplierOrder
+Supplier ||--o{ SupplierStock
+Product ||--o{ SupplierStock
+Product ||--o{ SupplierOrder
+BusinessStock ||--o{ Product
+
+
+@enduml
