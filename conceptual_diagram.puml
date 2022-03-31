@@ -2,13 +2,24 @@
 
 skinparam BackgroundColor transparent
 
-skinparam HeaderFontColor white
-skinparam HeaderFontSize 15
+skinparam HeaderFontColor #52FF69
+skinparam HeaderFontSize 18
 
-skinparam ObjectBackgroundColor white
+skinparam ArrowFontSize 15
+skinparam ArrowColor D3374A
+skinparam ArrowThickness 3
+skinparam ArrowFontColor #3FD0C4
 
+skinparam ObjectBorderColor white
+skinparam ObjectBorderThickness 3
+skinparam ObjectAttributeFontSize 13
+skinparam ObjectAttributeFontColor FF6127
+skinparam ObjectBackgroundColor #283747
+skinparam ObjectFontSize 14
+skinparam ObjectFontStyle Bold
+skinparam ObjectFontColor #FFB623
 
-header conceptual model
+header **conceptual model**
 
 object "**Client**" as Client {
     business_name

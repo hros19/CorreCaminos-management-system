@@ -1,9 +1,24 @@
 @startuml Logical Database Model
 
-skinparam HeaderFontColor FireBrick
-skinparam BackgroundColor DarkSlateGray
+skinparam BackgroundColor transparent
 
-!theme reddress-darkblue
+skinparam HeaderFontColor #52FF69
+skinparam HeaderFontSize 18
+
+skinparam ArrowFontSize 15
+skinparam ArrowColor D3374A
+skinparam ArrowThickness 2
+skinparam ArrowFontColor #3FD0C4
+
+skinparam ClassBorderColor white
+skinparam ClassBorderThickness 3
+skinparam ClassAttributeFontSize 14
+skinparam ClassAttributeFontColor FF6127
+skinparam ClassBackgroundColor #283747
+skinparam ClassFontSize 15
+skinparam ClassFontStyle Bold
+skinparam ClassFontColor #FFB623
+
 
 header Logical Model
 
