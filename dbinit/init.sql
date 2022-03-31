@@ -1,0 +1,5 @@
+-- ===============================================
+-- Authors: Benjamin Johnson, Hansol Antay
+-- Create date: 3/31/2022
+-- Name of the database: correcaminosdb
+-- ===============================================
