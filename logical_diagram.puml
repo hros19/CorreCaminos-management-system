@@ -47,6 +47,7 @@ entity "Vehicle" as Vehicle {
 
 entity "MaintenanceLog" as MaintenanceLog {
     **maintenance_id**: integer <<generated>>
+     //vehicle_id//: <<FK: Vehicle.vehicle_id>> 
     --
     *maintenance_type: text
     *maintenenace_day: date = now()
