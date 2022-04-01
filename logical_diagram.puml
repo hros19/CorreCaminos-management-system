@@ -84,7 +84,7 @@ entity "Business Stock" as BusinessStock {
 }
 
 entity "Supplier" as Supplier {
-    **suplier_id**: integer <<generated>>
+    **supplier_id**: integer <<generated>>
     --
     *supplier_name: text
     *formal_address: text
