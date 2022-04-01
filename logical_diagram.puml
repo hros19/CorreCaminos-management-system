@@ -113,7 +113,6 @@ entity "SupplierStock" as SupplierStock {
 entity "SupplierOrder" as SupplierOrder {
     **supplier_order_id**: integer <<generated>>
     //supplier_id//: <<FK: Supplier.supplier_id>>
-    //product_id//: <<FK: Product.product_id>>
     --
    *order_date: date = now()
 }
@@ -135,6 +134,6 @@ Supplier ||--o{ SupplierStock
 Product ||--o{ SupplierStock
 Product ||--o{ SupplierOrder
 BusinessStock ||--o{ Product
-SupplierStock ||--o{  SupplierOrderDetail
+SupplierOrder ||--o{  SupplierOrderDetail
 
 @enduml
