@@ -63,13 +63,18 @@ entity "Driver" as Driver {
     *hiring_date: date = now()
 }
 
-entity "Order" as Order {
+entity "OrderC" as OrderC{
     **order_id**: integer <<generated>>
     //client_id//: <<FK Client.client_id>>
+    --
+    *status: text = 'pending'
+}
+
+entity "OrderDetail" as OrderDetail {
+    //order_id//: <<FK OrderC.order_id>>
     //product_id//: <<FK Produc.product_id>>
     --
     *quantity: integer
-    status: text = 'pending'
 }
 
 entity "Business Stock" as BusinessStock {
@@ -110,19 +115,26 @@ entity "SupplierOrder" as SupplierOrder {
     //supplier_id//: <<FK: Supplier.supplier_id>>
     //product_id//: <<FK: Product.product_id>>
     --
+   *order_date: date = now()
+}
+
+entity "SupplierOrderDetail" as SupplierOrderDetail {
+    //supplier_order_id//: <<FK: SupplierOrder.supplier_order_id>>
+    //product_id//: <<FK: Product.product_id>>
+    --
     *quantity: integer
-    order_date: date = now()
 }
 
 Driver ||--|| Vehicle
 Vehicle ||--o{ MaintenanceLog
-Client ||--o{ Order
-Product ||--o{ Order
+Client ||--o{ OrderC
+Product ||--o{ OrderC
+OrderC ||--o{ OrderDetail
 Supplier ||--o{ SupplierOrder
 Supplier ||--o{ SupplierStock
 Product ||--o{ SupplierStock
 Product ||--o{ SupplierOrder
 BusinessStock ||--o{ Product
-
+SupplierStock ||--o{  SupplierOrderDetail
 
 @enduml
