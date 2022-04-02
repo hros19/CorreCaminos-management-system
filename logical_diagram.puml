@@ -34,6 +34,7 @@ entity "Client" as Client {
   *formal_address: text
   *geological_address: point
   *delivery_interval: text
+  *delivery_days: text
 }
 note top
   delivery_interval 
