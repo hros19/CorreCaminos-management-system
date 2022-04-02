@@ -33,7 +33,12 @@ entity "Client" as Client {
   *zone: text
   *formal_address: text
   *geological_address: point
+  *delivery_interval: text
 }
+note top
+  delivery_interval 
+  = {daily, weekly, twoPerWeek, biweekly}
+end note
 
 entity "Vehicle" as Vehicle {
     **vehicle_id**: number <<generated>>
