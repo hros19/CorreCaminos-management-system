@@ -76,8 +76,8 @@ entity "ClientOrder" as OrderC{
 }
 
 entity "ClientOrderDetail" as OrderDetail {
-    //order_id//: <<FK OrderC.order_id>>
-    //product_id//: <<FK Produc.product_id>>
+    //order_id//: <<FK ClienteOrder.order_id>>
+    //product_id//: <<FK Product.product_id>>
     --
     *quantity: integer
 }
