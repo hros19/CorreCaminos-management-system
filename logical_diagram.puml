@@ -68,14 +68,14 @@ entity "Driver" as Driver {
     *hiring_date: date = now()
 }
 
-entity "OrderC" as OrderC{
+entity "ClientOrder" as OrderC{
     **order_id**: integer <<generated>>
     //client_id//: <<FK Client.client_id>>
     --
     *status: text = 'pending'
 }
 
-entity "OrderDetail" as OrderDetail {
+entity "ClientOrderDetail" as OrderDetail {
     //order_id//: <<FK OrderC.order_id>>
     //product_id//: <<FK Produc.product_id>>
     --
