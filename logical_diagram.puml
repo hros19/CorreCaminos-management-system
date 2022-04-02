@@ -50,6 +50,7 @@ entity "Vehicle" as Vehicle {
     *tank_capacity: float
     *current_gasoline_amount: float
     last_gas_refill: date
+    kilometers_traveled: float
 }
 
 entity "MaintenanceLog" as MaintenanceLog {
