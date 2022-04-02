@@ -47,8 +47,9 @@ entity "Vehicle" as Vehicle {
     *car_plaque: integer
     type_of_gas: text = 'premium'
     *purchase_date: date
-    tank_capacity: float
-    current_gasoline_amount: float
+    *tank_capacity: float
+    *current_gasoline_amount: float
+    last_gas_refill: date
 }
 
 entity "MaintenanceLog" as MaintenanceLog {
