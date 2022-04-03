@@ -45,7 +45,7 @@ entity "Vehicle" as Vehicle {
     **vehicle_id**: number <<generated>>
     --
     *car_brand: text
-    *car_plaque: integer
+    *car_plaque: text
     type_of_gas: text = 'premium'
     *purchase_date: date
     *tank_capacity: float
