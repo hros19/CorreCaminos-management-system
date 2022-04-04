@@ -1,7 +1,7 @@
 -- ==========================================================================================
 -- DATABASE: correcaminosdb
 -- CREATION DATE: April 02, 2022
--- Authors: Hansol Antay, Benjamin Johnson
+-- Authors: Hansol Antay
 -- ==========================================================================================
 
 DROP DATABASE IF EXISTS correcaminosdb;
@@ -510,29 +510,52 @@ BEGIN
 END $$
 DELIMITER ;
 
+CREATE TABLE ZoneXRoute (
+	zone_id INT NOT NULL,
+  route_id INT NOT NULL,
+  CONSTRAINT PK_ZoneXRoute_id
+		PRIMARY KEY (zone_id, route_id),
+	CONSTRAINT FK_Zone_id
+		FOREIGN KEY (zone_id)
+		REFERENCES Zone (zone_id)
+    ON DELETE CASCADE,
+	CONSTRAINT FK_Route_id
+		FOREIGN KEY (route_id)
+    REFERENCES Route (route_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_zonexroute$$
+CREATE PROCEDURE create_zonexroute(IN pZoneId INT, IN pRouteId INT)
+BEGIN
+	INSERT INTO ZoneXRoute (zone_id, route_id)
+	VALUES (pZoneId, pRouteId);
+  SELECT Zone.zone_name, zxr.zone_id, Route.route_name, zxr.route_id FROM ZoneXRoute zxr
+  RIGHT JOIN Zone ON zxr.zone_id = Zone.zone_id
+  LEFT JOIN Route ON zxr.route_id = Route.route_id
+  WHERE ( ((Zone.zone_id, Route.route_id) = (pZoneId, pRouteId)) AND Route.route_name != '' AND Zone.zone_name != '');
+END $$
+DELIMITER ;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 DROP TABLE IF EXISTS Route;
 CREATE TABLE Route (
 	route_id INT NOT NULL AUTO_INCREMENT,
-  zone_id INT NOT NULL,
   route_name VARCHAR(255) NOT NULL,
   route_distance_km FLOAT NOT NULL,
   CONSTRAINT PK_Route
 		PRIMARY KEY (route_id),
-	CONSTRAINT FK_Route_ZoneId
-		FOREIGN KEY (zone_id)
-    REFERENCES Zone (zone_id)
-    ON DELETE CASCADE,
 	CONSTRAINT UQ_Route_Name
 		UNIQUE (route_name)
 );
 
 DELIMITER $$
 DROP PROCEDURE IF EXISTS create_route$$
-CREATE PROCEDURE create_route(IN pZoneId INT, IN pRouteName VARCHAR(255), IN pRouteDistanceKm FLOAT)
+CREATE PROCEDURE create_route(IN pRouteName VARCHAR(255), IN pRouteDistanceKm FLOAT)
 BEGIN
-	INSERT INTO Route (zone_id, route_name, route_distance_km) 
-  VALUES (pZoneId, pRouteName, pRouteDistanceKm);
+	INSERT INTO Route (route_name, route_distance_km) 
+  VALUES (pRouteName, pRouteDistanceKm);
   SET @ROUTE_ID = LAST_INSERT_ID();
   SELECT * FROM Route WHERE route_id = @ROUTE_ID;
 END $$
@@ -553,18 +576,42 @@ DELIMITER ;
 
 DELIMITER $$
 DROP PROCEDURE IF EXISTS upd_route$$
-CREATE PROCEDURE upd_route(IN pRouteId INT, IN pZoneId INT, IN pRouteName VARCHAR(255),
+CREATE PROCEDURE upd_route(IN pRouteId INT, IN pRouteName VARCHAR(255),
 													 IN pRouteDistanceKm FLOAT)
 BEGIN
 	IF (pRouteDistanceKm > 0 AND pRouteName != "")
 		THEN
 			UPDATE Route
-			SET zone_id = pZoneId, route_name = pRouteName, route_distance_km = pRouteDistanceKm
+			SET route_name = pRouteName, route_distance_km = pRouteDistanceKm
       WHERE route_id = pRouteId;
 		ELSE SELECT 'Invalid inputs' AS 'Error';
 	END IF;
 END $$
 DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_zone('CENTER');
+CALL create_zone('ATLANTIC');
+CALL create_zone('EAST');
+CALL create_zone('WEST');
+
+CALL create_route('ROUTE_A', 2.4);
+CALL create_route('ROUTE_B', 1.6);
+CALL create_route('ROUTE_C', 2.2);
+CALL create_route('ROUTE_D', 6.5);
+CALL create_route('ROUTE_E', 1.7);
+CALL create_route('ROUTE_F', 0.2);
+CALL create_route('ROUTE_G', 1.3);
+CALL create_route('ROUTE_H', 4.2);
+CALL create_route('ROUTE_I', 3.3);
+CALL create_route('ROUTE_J', 2.6);
+
+SELECT * FROM ZoneXRoute;
+DELETE FROM ZoneXRoute;
+CALL create_zonexroute(1, 7);
+
+INSERT INTO ZoneXRoute (zone_id, route_id)
+VALUES (1, 2), (1, 3), (1, 5), (2, 4), (2, 6);
 
 SHOW PROCEDURE STATUS;
 SHOW TABLES;
