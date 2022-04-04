@@ -400,17 +400,25 @@ DELIMITER ;
 
 CREATE TABLE Client (
 	client_id INT NOT NULL AUTO_INCREMENT,
+  geo_address_id INT,
   zone_id INT,
+  dev_interval_id INT NOT NULL,
   business_type_id INT,
 	business_name VARCHAR(255) NOT NULL,
-  business_type VARCHAR(255) NOT NULL,
 	business_representative VARCHAR(255) NOT NULL,
 	phone_number VARCHAR(255) NOT NULL,
 	email VARCHAR(255) NOT NULL,
   formal_address VARCHAR(255) NOT NULL,
-  geological_address POINT NOT NULL,
 	CONSTRAINT PK_Client 
 		PRIMARY KEY (client_id),
+	CONSTRAINT FK_Client_DevIntervId
+		FOREIGN KEY (dev_interval_id)
+		REFERENCES DeliveryInterval (dev_interval_id)
+    ON DELETE RESTRICT,
+	CONSTRAINT FK_Client_GeoAddrId
+		FOREIGN KEY (geo_address_id)
+    REFERENCES GeologicalAddress (geo_address_id)
+    ON DELETE SET NULL,
 	CONSTRAINT FK_Client_BussTypeId
 		FOREIGN KEY (business_type_id)
 		REFERENCES BusinessType (business_type_id)
@@ -424,10 +432,182 @@ CREATE TABLE Client (
 	CONSTRAINT UQ_Client_phone
 		UNIQUE (phone_number),
 	CONSTRAINT UQ_Client_name
-		UNIQUE (business_name),
-	CONSTRAINT UQ_GeoLog_Address
-		UNIQUE (geologial_address)
+		UNIQUE (business_name)
 ); 
+
+DELIMITER $$
+CREATE PROCEDURE create_client(IN pZoneId INT, IN pDevIntervalId INT, IN pBussTypeId INT,
+															 IN pBussName VARCHAR(255), IN pBussRep VARCHAR(255),
+															 IN pPhoneNumber VARCHAR(255), IN pEmail VARCHAR(255),
+                               IN pFormalAddress VARCHAR(255), IN pLatitude FLOAT, IN pLongitude FLOAT)
+BEGIN
+	SET @vQtyEmail = -1;
+  SET @vQtyPhone = -1;
+  SET @vQtyBussName = -1;
+  SET @vTotalClients = (SELECT COUNT(*) FROM Client);  
+  CALL isValueInTable('Client', 'email', CONCAT('"', pEmail, '"'), @vQtyEmail);
+  CALL isValueInTable('Client', 'phone_number', CONCAT('"', pPhoneNumber, '"'), @vQtyPhone);
+  CALL isValueInTable('Client', 'business_name', CONCAT('"', pBussName, '"'), @vQtyBussName);
+  IF ((@vQtyEmail > 0 AND @vQtyPhone > 0 AND @vQtyBussName > 0) OR @vTotalClients = 0) THEN
+		SET @vGeoAddrId = create_geo_addr(pLatitude, pLongitude);
+		INSERT INTO Client (geo_address_id, zone_id, dev_interval_id, business_type_id, business_name,
+												business_representative, phone_number, email, formal_address)
+		VALUES (@vGeoAddrId, pZoneId, pDevIntervalId, pBussTypeId, pBussName, pBussRep,
+						pPhoneNumber, pEmail, pFormalAddress);
+		SET @ID = LAST_INSERT_ID();
+		SELECT * FROM Client WHERE client_id = @ID;
+	ELSE
+		SELECT 'Duplicated values' AS 'Error';
+	END IF;
+END $$
+DELIMITER ;
+
+CALL create_client(4, 4, 4, 'Chino pup', 'Otro chino', '2424d', 'chinomail2', 'barrio chino 2', 52.4, 30.2);
+SELECT * FROM Client;
+SELECT * FROM GeologicalAddress;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS isValueInTable$$
+CREATE PROCEDURE isValueInTable(IN pTable VARCHAR(255), IN pColumn VARCHAR(255), IN pValue VARCHAR(255),
+																OUT result INT)
+BEGIN
+	DECLARE strQuery VARCHAR(300);
+  SET @RES = -1;
+  SET @strQuery = CONCAT('SELECT COUNT(*) INTO @RES FROM ', pTable,
+												 ' WHERE ', pValue, ' NOT IN (', 
+												 'SELECT ', pColumn, ' FROM ', pTable, ');');
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+  SET result = @RES;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CREATE TABLE GeologicalAddress (
+	geo_address_id INT NOT NULL AUTO_INCREMENT,
+  latitude FLOAT NOT NULL,
+  longitude FLOAT NOT NULL,
+  geo_point POINT NOT NULL,
+  CONSTRAINT PK_GeoAddrId
+		PRIMARY KEY (geo_address_id),
+	CONSTRAINT UQ_GeoAddrLatLong
+		UNIQUE (latitude, longitude)
+);
+
+DELIMITER $$
+CREATE FUNCTION create_geo_addr(pLatitude FLOAT, pLongitude FLOAT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @vPoint = POINT(pLatitude, pLongitude);
+	INSERT INTO GeologicalAddress (latitude, longitude, geo_point) VALUES (pLatitude, pLongitude, @vPoint);
+  SET @ID = LAST_INSERT_ID();
+  RETURN @ID;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CREATE TABLE DeliveryDay (
+	dev_day_id INT NOT NULL AUTO_INCREMENT,
+  dev_day_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_DevDayId
+		PRIMARY KEY (dev_day_id),
+	CONSTRAINT UQ_DevDayName
+		UNIQUE (dev_day_name)
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_dev_day$$
+CREATE PROCEDURE create_dev_day(IN pDevDayName VARCHAR(255))
+BEGIN
+	INSERT INTO DeliveryDay (dev_day_name) VALUES (pDevDayName);
+  SET @ID = LAST_INSERT_ID();
+  SELECT * FROM DeliveryDay WHERE dev_day_id = @ID;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_dev_days$$
+CREATE PROCEDURE getp_dev_days(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM DeliveryDay ',
+												 'ORDER BY dev_day_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_dev_day$$
+CREATE PROCEDURE upd_dev_day(IN pDevDayId INT, IN pDevDayName VARCHAR(255))
+BEGIN
+	UPDATE DeliveryDay
+  SET dev_dev_name = pDevDayName WHERE dev_day_id = pDevDayId;
+END $$
+DELIMITER ;
+
+DROP TABLE IF EXISTS ClientXDevDay;
+CREATE TABLE ClientXDevDay (
+	client_id INT NOT NULL,
+  dev_day_id INT NOT NULL,
+  CONSTRAINT PK_ClntXDevDayId
+		PRIMARY KEY (client_id, dev_day_id),
+	CONSTRAINT FK_client_id
+		FOREIGN KEY (client_id)
+		REFERENCES Client (client_id)
+    ON DELETE CASCADE,
+	CONSTRAINT FK_devday_id
+		FOREIGN KEY (dev_day_id)
+    REFERENCES DeliveryDay (dev_day_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_clientxdevday$$
+CREATE PROCEDURE create_clientxdevday(IN pClientId INT, IN pDevDayId INT)
+BEGIN
+	SET @vDevIntervalName = (SELECT dev_interval_name FROM DeliveryInterval
+													 LEFT JOIN Client ON client_id = pClientId
+													 WHERE Client.dev_interval_id = DeliveryInterval.dev_interval_id);
+	SET @vQtyDaysRegistered = (SELECT COUNT(*) FROM ClientXDevDay WHERE client_id = pClientId);
+  CASE
+		WHEN ((@vDevIntervalName = 'TWO_PER_WEEK' AND @vQtyDaysRegistered < 2) OR
+				 ((@vDevIntervalName = 'BIWEEKLY' OR @vDevIntervalName = 'WEEKLY') AND @vQtyDaysRegistered < 1))
+			THEN
+				INSERT INTO ClientXDevDay (client_id, dev_day_id)
+				VALUES (pClientId, pDevDayId);
+				SELECT Client.business_name, cxdd.client_id, DeliveryDay.dev_day_name, cxdd.dev_day_id FROM ClientXDevDay cxdd
+				RIGHT JOIN Client ON cxdd.client_id = Client.client_id
+				LEFT JOIN DeliveryDay ON cxdd.dev_day_id = DeliveryDay.dev_day_id
+				WHERE ( ((Client.client_id, DeliveryDay.dev_day_id) = (pClientId, pDevDayId)) AND Client.business_name != '' AND DeliveryDay.dev_day_name != '');
+		ELSE SELECT 'Limit of days passed' AS 'Error';
+	END CASE;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS rem_clientxdevday$$
+CREATE PROCEDURE rem_clientxdevday(IN pClientId INT, IN pDevDayId INT)
+BEGIN
+	DELETE FROM ClientXDevDay
+  WHERE (client_id, dev_day_id) = (pClientId, pDevDayId);
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_client_devdays$$
+CREATE PROCEDURE get_client_devdays(IN pClientId INT)
+BEGIN
+	SELECT devd.dev_day_name FROM Client
+	INNER JOIN ClientXDevDay cxdv ON cxdv.client_id = pClientId
+	INNER JOIN DeliveryDay devd ON devd.dev_day_id = cxdv.dev_day_id
+	WHERE Client.client_id = pClientId;
+END $$
+DELIMITER ;
+
+SELECT * FROM Client;
+SELECT * FROM ClientXDevDay;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -471,7 +651,6 @@ BEGIN
   SET dev_interval_name = pDevIntervalName WHERE dev_interval_id = pDevIntervalId;
 END $$
 DELIMITER ;
-
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CREATE TABLE BusinessType (
@@ -655,6 +834,19 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_dev_interval('DAILY');
+CALL create_dev_interval('WEEKLY');
+CALL create_dev_interval('TWO_PER_WEEK');
+CALL create_dev_interval('BIWEEKLY');
+
+CALL create_dev_day('MONDAY');
+CALL create_dev_day('TUESDAY');
+CALL create_dev_day('WEDNESDAY');
+CALL create_dev_day('THURSDAY');
+CALL create_dev_day('FRIDAY');
+CALL create_dev_day('SATURDAY');
+CALL create_dev_day('SUNDAY');
+
 CALL create_zone('CENTER');
 CALL create_zone('ATLANTIC');
 CALL create_zone('EAST');
