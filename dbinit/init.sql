@@ -538,6 +538,28 @@ BEGIN
 END $$
 DELIMITER ;
 
+DELIMITER $$
+DROP PROCEDURE IF EXISTS rem_zonexroute$$
+CREATE PROCEDURE rem_zonexroute(IN pZoneId INT, IN pRouteId INT)
+BEGIN
+	DELETE FROM ZoneXRoute
+  WHERE (zone_id, route_id) = (pZoneId, pRouteId);
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_zone_routes$$
+CREATE PROCEDURE getp_zone_routes(IN pZoneId INT, IN pOrder VARCHAR(255),
+																	IN pStart INT, IN pElemPerPage INT)
+BEGIN
+  SELECT Route.route_id, Route.route_name FROM Zone
+  INNER JOIN ZoneXRoute ON ZoneXRoute.zone_id = 1
+  INNER JOIN Route ON ZoneXRoute.route_id = Route.route_id
+  WHERE Zone.zone_id = 1
+  LIMIT pStart, pElemPerPage;
+END $$
+DELIMITER ;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 DROP TABLE IF EXISTS Route;
 CREATE TABLE Route (
@@ -608,7 +630,8 @@ CALL create_route('ROUTE_J', 2.6);
 
 SELECT * FROM ZoneXRoute;
 DELETE FROM ZoneXRoute;
-CALL create_zonexroute(1, 7);
+CALL create_zonexroute(2, 4);
+CALL create_zonexroute(2, 3);
 
 INSERT INTO ZoneXRoute (zone_id, route_id)
 VALUES (1, 2), (1, 3), (1, 5), (2, 4), (2, 6);
