@@ -431,6 +431,49 @@ CREATE TABLE Client (
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+CREATE TABLE DeliveryInterval (
+	dev_interval_id INT NOT NULL AUTO_INCREMENT,
+  dev_interval_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_DevIntervId
+		PRIMARY KEY (dev_interval_id),
+	CONSTRAINT UQ_DevIntervName
+		UNIQUE (dev_interval_name)
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_dev_interval$$
+CREATE PROCEDURE create_dev_interval(IN pDevIntervalName VARCHAR(255))
+BEGIN
+	INSERT INTO DeliveryInterval (dev_interval_name) VALUES (pDevIntervalName);
+  SET @DEV_INTERV_ID = LAST_INSERT_ID();
+  SELECT * FROM DeliveryInterval WHERE dev_interval_id = @DEV_INTERV_ID;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_dev_intervals$$
+CREATE PROCEDURE getp_dev_intervals(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM DeliveryInterval ',
+												 'ORDER BY dev_interval_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_dev_interval$$
+CREATE PROCEDURE upd_dev_interval(IN pDevIntervalId INT, IN pDevIntervalName VARCHAR(255))
+BEGIN
+	UPDATE DeliveryInterval
+  SET dev_interval_name = pDevIntervalName WHERE dev_interval_id = pDevIntervalId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 CREATE TABLE BusinessType (
 	business_type_id INT NOT NULL AUTO_INCREMENT,
   business_type_name VARCHAR(255) NOT NULL,
@@ -461,7 +504,7 @@ BEGIN
 END $$
 DELIMITER ;
 
-DROP PROCEDURE upd_business_type;
+DROP PROCEDURE IF EXISTS upd_business_type;
 DELIMITER $$
 CREATE PROCEDURE upd_business_type(IN pBusTypeId INT, IN pBusTypeName VARCHAR(255))
 BEGIN
