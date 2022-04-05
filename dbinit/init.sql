@@ -436,6 +436,23 @@ CREATE TABLE Client (
 ); 
 
 DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_client$$
+CREATE PROCEDURE upd_client(IN pClientId INT, IN pBussTypeId INT,
+													IN pBussName VARCHAR(255), IN pBussRep VARCHAR(255),
+                          IN pPhoneNumber VARCHAR(255), IN pEmail VARCHAR(255),
+                          IN pFormalAddress VARCHAR(255))
+BEGIN
+	UPDATE Client
+  SET business_type_id = pBussTypeId, business_name = pBussName, business_representative = pBussRep,
+			phone_number = pPhoneNumber, email = pEmail, formal_address = pFormalAddress
+	WHERE client_id = pClientId;
+END $$
+DELIMITER ;
+
+CALL upd_client(5, 3, 'SuperCorales 3', 'Li Cheng', '88889092', 'Chen@mail.com', 'Conchinchina');
+SELECT * FROM CLIENT;
+
+DELIMITER $$
 CREATE PROCEDURE create_client(IN pZoneId INT, IN pDevIntervalId INT, IN pBussTypeId INT,
 															 IN pBussName VARCHAR(255), IN pBussRep VARCHAR(255),
 															 IN pPhoneNumber VARCHAR(255), IN pEmail VARCHAR(255),
@@ -462,12 +479,7 @@ BEGIN
 END $$
 DELIMITER ;
 
-CALL create_client(4, 4, 4, 'Chino pup', 'Otro chino', '2424d', 'chinomail2', 'barrio chino 2', 52.4, 30.2);
-SELECT * FROM Client;
-SELECT * FROM GeologicalAddress;
-
 DELIMITER $$
-DROP PROCEDURE IF EXISTS isValueInTable$$
 CREATE PROCEDURE isValueInTable(IN pTable VARCHAR(255), IN pColumn VARCHAR(255), IN pValue VARCHAR(255),
 																OUT result INT)
 BEGIN
@@ -606,9 +618,6 @@ BEGIN
 END $$
 DELIMITER ;
 
-SELECT * FROM Client;
-SELECT * FROM ClientXDevDay;
-
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CREATE TABLE DeliveryInterval (
@@ -652,7 +661,6 @@ BEGIN
 END $$
 DELIMITER ;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 CREATE TABLE BusinessType (
 	business_type_id INT NOT NULL AUTO_INCREMENT,
   business_type_name VARCHAR(255) NOT NULL,
@@ -693,7 +701,6 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 CREATE TABLE Zone (
 	zone_id INT NOT NULL AUTO_INCREMENT,
   zone_name VARCHAR(255) NOT NULL,
@@ -834,18 +841,154 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+DROP TABLE ClientOrder;
+CREATE TABLE ClientOrder (
+	client_order_id INT NOT NULL AUTO_INCREMENT,
+  client_id INT NOT NULL,
+  order_status VARCHAR(255) NOT NULL,
+  order_date DATE DEFAULT (CURRENT_DATE),
+  order_delivery_date DATE DEFAULT NULL,
+  CONSTRAINT PK_CltOrder
+		PRIMARY KEY (client_order_id),
+	CONSTRAINT FK_CltOrder_ClientId
+		FOREIGN KEY (client_id)
+    REFERENCES Client (client_id)
+    ON DELETE RESTRICT
+);
+
+INSERT INTO ClientOrder (client_id, order_status, order_date)
+VALUES (6, 'PENDING', '2022-03-05');
+
+
+DELIMITER $$
+DROP FUNCTION IF EXISTS getstr_ClnDevDays$$
+CREATE FUNCTION getstr_ClnDevDays(pClientId INT)
+	RETURNS VARCHAR(255) DETERMINISTIC
+BEGIN
+set @v := (SELECT GROUP_CONCAT(dev_day_name) AS "days" FROM CLIENT
+		INNER JOIN ClientXDevDay cxdv ON cxdv.client_id = 6
+		INNER JOIN DeliveryDay devd ON devd.dev_day_id = cxdv.dev_day_id
+		WHERE Client.client_id = 6);
+RETURN @v;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_clientOrder$$
+CREATE PROCEDURE create_clientOrder(IN pClientId INT, IN pStatus VARCHAR(255))
+BEGIN
+	SET @vDays = getstr_ClnDevDays(pClientId);
+  SET @vDevInterval = (SELECT devint.dev_interval_name FROM DeliveryInterval devint 
+											 LEFT JOIN Client ON Client.dev_interval_id = devint.dev_interval_id
+											 WHERE client_id = 6);
+	SET @vTotalDeliv = (SELECT COUNT(*) FROM ClientOrder WHERE client_id = pClientId);
+	IF (@vDevInterval = 'TWO_PER_WEEK') THEN
+		SET @vDayOne = SUBSTRING_INDEX(@vDays, ",", 1);
+    SET @vDayTwo = SUBSTRING_INDEX(@vDays, ",", -1);
+    -- Just one day (of two posibilities) selected as a delivery days.
+    IF (@vDayOne = @vDayTwo) THEN
+			-- No previous deliveries. New client, maybe.
+      IF (@vTotalDeliv = 0) THEN
+				SET @vSelecDate = getNextDateOf(@vDayOne);
+        INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+        VALUES (pClientId, pStatus, @vSelecDate);
+        SET @ID = LAST_INSERT_ID();
+        SELECT @ID; --  We return the id for asociated the order details.
+			ELSE SELECT 'papu';
+      END IF;
+		ELSE SELECT 'OWO'; -- Si hay posibilidad de dos días
+    END IF;
+  END IF;
+  /*
+	INSERT INTO ClientOrder (client_id, order_status, order_date) 
+  VALUES (pClientId, pStatus, pDate);
+  SET @ID = LAST_INSERT_ID();
+  SELECT @ID;*/
+END $$
+DELIMITER ;
+
+SELECT COUNT(*) FROM ClientOrder WHERE client_id = 5;
+SELECT * FROM ClientOrder;
+INSERT INTO ClientOrder (client_id, order_status) VALUES (6, 'PENDING');
+
+SELECT * FROM Client;
+SELECT * FROM ClientXDevDay;
+DELETE FROM ClientXDevDay;
+INSERT INTO ClientXDevDay (client_id, dev_day_id) VALUES (6, 10);
+
+CALL create_clientOrder(3, 'xd');
+
+DELIMITER $$
+DROP FUNCTION IF EXISTS getCloserDay$$
+CREATE FUNCTION getCloserDay(pDayNameA VARCHAR(20), pDayNameB VARCHAR(20))
+	RETURNS DATE DETERMINISTIC
+BEGIN
+	DECLARE pDateA DATE;
+  DECLARE pDateB DATE;
+  SET pDateA = getNextDateOf(pDayNameA);
+  SET pDateB = getNextDateOf(pDayNameB);
+  IF (DATEDIFF(pDateA, CURRENT_DATE) < DATEDIFF(pDateB, CURRENT_DATE)) THEN
+		RETURN pDateA;
+	ELSE RETURN pDateB;
+  END IF;
+END $$
+DELIMITER ;
+
+SELECT getCloserDay('Friday', 'Saturday');
+SELECT DATEDIFF('2022-04-20', CURRENT_DATE);
+
+DELIMITER $$
+DROP FUNCTION IF EXISTS getNextDateOf$$
+CREATE FUNCTION getNextDateOf(pDayName VARCHAR(20))
+	RETURNS DATE DETERMINISTIC
+BEGIN
+	DECLARE curr_date DATE;
+	SET curr_date = CURRENT_DATE + 1;
+		WHILE (DAYNAME(curr_date) != pDayName) DO
+			SET curr_date = (curr_date + 1);
+		END WHILE;
+		RETURN curr_date;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_clientOrders$$
+CREATE PROCEDURE getp_clientOrders(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM ClientOrder ',
+												 'ORDER BY ', pParameter,' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_clientOrder$$
+CREATE PROCEDURE upd_clientOrder(IN pClientOrderId INT, IN pStatus VARCHAR(255),
+													 IN pRouteDistanceKm FLOAT)
+BEGIN
+	UPDATE ClientOrder
+  SET order_status = pStatus
+  WHERE client_order_id = pOrderId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CALL create_dev_interval('DAILY');
 CALL create_dev_interval('WEEKLY');
 CALL create_dev_interval('TWO_PER_WEEK');
 CALL create_dev_interval('BIWEEKLY');
 
-CALL create_dev_day('MONDAY');
-CALL create_dev_day('TUESDAY');
-CALL create_dev_day('WEDNESDAY');
-CALL create_dev_day('THURSDAY');
-CALL create_dev_day('FRIDAY');
-CALL create_dev_day('SATURDAY');
-CALL create_dev_day('SUNDAY');
+DELETE FROM DeliveryDay;
+CALL create_dev_day('Monday');
+CALL create_dev_day('Tuesday');
+CALL create_dev_day('Wednesday');
+CALL create_dev_day('Thursday');
+CALL create_dev_day('Friday');
+CALL create_dev_day('Saturday');
+CALL create_dev_day('Sunday');
 
 CALL create_zone('CENTER');
 CALL create_zone('ATLANTIC');
