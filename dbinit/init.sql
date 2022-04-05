@@ -866,9 +866,9 @@ CREATE FUNCTION getstr_ClnDevDays(pClientId INT)
 	RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
 set @v := (SELECT GROUP_CONCAT(dev_day_name) AS "days" FROM CLIENT
-		INNER JOIN ClientXDevDay cxdv ON cxdv.client_id = 6
+		INNER JOIN ClientXDevDay cxdv ON cxdv.client_id = pClientId
 		INNER JOIN DeliveryDay devd ON devd.dev_day_id = cxdv.dev_day_id
-		WHERE Client.client_id = 6);
+		WHERE Client.client_id = pClientId);
 RETURN @v;
 END $$
 DELIMITER ;
@@ -878,6 +878,7 @@ DROP PROCEDURE IF EXISTS create_clientOrder$$
 CREATE PROCEDURE create_clientOrder(IN pClientId INT, IN pStatus VARCHAR(255))
 BEGIN
 	SET @vDays = getstr_ClnDevDays(pClientId);
+  IF (@vDays IS NULL) THEN SELECT 'No registered days' AS ERROR; END IF;
   SET @vDevInterval = (SELECT devint.dev_interval_name FROM DeliveryInterval devint 
 											 LEFT JOIN Client ON Client.dev_interval_id = devint.dev_interval_id
 											 WHERE client_id = 6);
@@ -955,15 +956,65 @@ BEGIN
 					SELECT @ID; --  We return the id for asociate the order details.
 				END IF;
       END IF;
+    END IF; -- TWO_PER_WEEK, 1 DAY OR 2 DAYS.
+	ELSEIF (@vDevInterval = 'WEEKLY') THEN
+		SET @vDay = SUBSTRING_INDEX(@vDays, ",", 1);
+		-- No previous deliverys, select next day.
+    SET @vSelecDay = getNextDateOf(@vDay);
+    INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+		VALUES (pClientId, pStatus, @vSelecDate);
+		SET @ID = LAST_INSERT_ID();
+		SELECT @ID; --  We return the id for asociate the order details.
+	ELSEIF (@vDevInterval = 'DAILY') THEN
+		SET @vSelecDay = CURRENT_DATE + 1;
+    INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+		VALUES (pClientId, pStatus, @vSelecDate);
+		SET @ID = LAST_INSERT_ID();
+    SELECT @ID; --  We return the id for asociate the order details.
+	ELSEIF (@vDevInterval = 'BIWEEKLY') THEN
+		SET @vDay = SUBSTRING_INDEX(@vDays, ",", 1);
+		-- If there are no previous deliveries, select the next day.
+		IF (@vTotalDeliv = 0) THEN
+				SET @vSelecDate = getNextDateOf(@vDayOne);
+        INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+        VALUES (pClientId, pStatus, @vSelecDate);
+        SET @ID = LAST_INSERT_ID();
+        SELECT @ID; --  We return the id for asociated the order details.
+		-- Previous deliveries were founded. We need to follow the last delivery date.
+    ELSE
+			-- Selecting the last date registered for a delivery.
+			SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
+												 WHERE ClientOrder.client_id = pClientId
+												 ORDER BY order_delivery_date DESC LIMIT 1);
+			-- If the last delivery is in a future date. (Pending to arrive)
+      IF ((CURRENT_DATE < @vSelecDate) = 1) THEN
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
+			-- If is the last delivery is today (not aplicable, asuming the truck content is not 'reorganizable'
+			ELSEIF ((CURRENT_DATE = @vSelecDate) = 1) THEN
+				-- If this happens, we need to move to the next two weeks.
+				SET @vSelecDate = CURRENT_DATE + 14;
+				INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+				VALUES (pClientId, pStatus, @vSelecDate);
+				SET @ID = LAST_INSERT_ID();
+				SELECT @ID; --  We return the id for asociate the order details.
+			-- If the last delivery is in the past. We need to check the last date.
+      ELSE
+				
+			END IF;
     END IF;
   END IF;
 END $$
 DELIMITER ;
--- SEGUIR CON DEMAS CASOS DE LA FUNCION DE ARRIBA.
-USE correcaminosdb;
+
+SET @XD = (getstr_ClnDevDays(2));
+SELECT (@XD IS NULL);
+SELECT * FROM DeliveryInterval;
 -- FALSE 0
 SELECT (DAYNAME(CURRENT_DATE + 7));
-
+select * from ClientXDevDay;
 SELECT order_delivery_date FROM ClientOrder
 WHERE ClientOrder.client_id = 6 ORDER BY order_delivery_date DESC LIMIT 1;
 
@@ -973,10 +1024,13 @@ SELECT * FROM ClientOrder;
 INSERT INTO ClientOrder (client_id, order_status, order_delivery_date) VALUES (6, 'PENDING', '2022-04-01');
 CALL create_clientOrder(6, 'PENDING');
 
+UPDATE Client
+SET dev_interval_id = 2 WHERE client_id = 6;
 SELECT * FROM Client;
 SELECT * FROM ClientXDevDay;
 DELETE FROM ClientXDevDay;
-INSERT INTO ClientXDevDay (client_id, dev_day_id) VALUES (6, 10);
+INSERT INTO ClientXDevDay (client_id, dev_day_id) VALUES (6, 11);
+CALL create_clientxdevday(6, 13);
 
 CALL create_clientOrder(3, 'xd');
 
