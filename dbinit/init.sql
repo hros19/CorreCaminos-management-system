@@ -894,22 +894,74 @@ BEGIN
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
         SELECT @ID; --  We return the id for asociated the order details.
-			ELSE SELECT 'papu';
+			-- Previous deliveries were founded. We need to follow the last delivery date.
+			ELSE
+				-- Selecting the last date registered for a delivery.
+				SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
+													 WHERE ClientOrder.client_id = pClientId
+                           ORDER BY order_delivery_date DESC LIMIT 1);
+				-- If the last delivery is in a future date. (Pending to arrive)
+				IF ((CURRENT_DATE < @vSelecDate) = 1) THEN
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
+				-- If is the last delivery is today (not aplicable, asuming the truck content is not 'reorganizable'
+				ELSEIF ((CURRENT_DATE = @vSelecDate) = 1) THEN
+					-- If this happens, we need to move to the next week.
+          SET @vSelecDate = CURRENT_DATE + 7;
+          INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
+				-- If the last delivery is in the past. We just take the next dev_day.
+				ELSE
+					SET @vSelecDate = getNextDateOf(@vDayOne);
+          INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
+        END IF;
       END IF;
-		ELSE SELECT 'OWO'; -- Si hay posibilidad de dos días
+		-- Two days to consider per week.
+		ELSE
+			-- No previous deliveries. New client, maybe.
+      IF (@vTotalDeliv = 0) THEN
+				SET @vSelecDate = getCloseDate(@vDayOne, @vDayTwo);
+        INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+        VALUES (pClientId, pStatus, @vSelecDate);
+        SET @ID = LAST_INSERT_ID();
+        SELECT @ID; --  We return the id for asociated the order details.
+			-- Previous deliveries were found. Need to follow the last delivery date.
+      ELSE
+				-- Selecting the last date registered for a delivery.
+				SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
+													 WHERE ClientOrder.client_id = pClientId
+                           ORDER BY order_delivery_date DESC LIMIT 1);
+				-- If the last delivery is in a future date. (Pending to arrive)
+				IF ((CURRENT_DATE < @vSelecDate) = 1) THEN
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
+				END IF;
+      END IF;
     END IF;
   END IF;
-  /*
-	INSERT INTO ClientOrder (client_id, order_status, order_date) 
-  VALUES (pClientId, pStatus, pDate);
-  SET @ID = LAST_INSERT_ID();
-  SELECT @ID;*/
 END $$
 DELIMITER ;
 
+-- FALSE 0
+SELECT (DAYNAME(CURRENT_DATE + 7));
+
+SELECT order_delivery_date FROM ClientOrder
+WHERE ClientOrder.client_id = 6 ORDER BY order_delivery_date DESC LIMIT 1;
+
 SELECT COUNT(*) FROM ClientOrder WHERE client_id = 5;
+DELETE FROM ClientOrder;
 SELECT * FROM ClientOrder;
-INSERT INTO ClientOrder (client_id, order_status) VALUES (6, 'PENDING');
+INSERT INTO ClientOrder (client_id, order_status, order_delivery_date) VALUES (6, 'PENDING', '2022-04-01');
+CALL create_clientOrder(6, 'PENDING');
 
 SELECT * FROM Client;
 SELECT * FROM ClientXDevDay;
