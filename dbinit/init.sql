@@ -939,6 +939,10 @@ BEGIN
 				SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
 													 WHERE ClientOrder.client_id = pClientId
                            ORDER BY order_delivery_date DESC LIMIT 1);
+				-- Selecting the last date registered for a delivery.
+				SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
+													 WHERE ClientOrder.client_id = pClientId
+                           ORDER BY order_delivery_date DESC LIMIT 1);
 				-- If the last delivery is in a future date. (Pending to arrive)
 				IF ((CURRENT_DATE < @vSelecDate) = 1) THEN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
@@ -1002,13 +1006,52 @@ BEGIN
 				SELECT @ID; --  We return the id for asociate the order details.
 			-- If the last delivery is in the past. We need to check the last date.
       ELSE
-				
+				-- If the last delivery was 14 days ago, sadly, the order would be send
+        -- in the next order.
+				IF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) = 14) = 1 ) THEN
+					SET @vSelecDate = CURRENT_DATE + 14;
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
+				-- If was a long time ago that the Client request some product, just
+        -- send it the next day of the delivery for that Client.
+				ELSEIF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) > 7 ) = 1 ) THEN
+					SET @vSelecDate = getNextDateOf(@vDayOne);
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociated the order details.
+				-- If the last delivery was exactly one week ago, that saids that the next delivery
+        -- is on the next week.
+				ELSEIF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) = 7 ) = 1) THEN
+					SET @vSelecDate = CURRENT_DATE + 7;
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociated the order details.
+				-- If the last delivery was less than a week ago, we just use that value and
+        -- select the date two weeks further
+				ELSEIF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) < 7 ) = 1) THEN
+					SET @vSelecDate = (STR_TO_DATE(@vSelecDate, '%Y-%m-%d') + 14);
+					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociated the order details.
+        END IF;
 			END IF;
     END IF;
   END IF;
 END $$
 DELIMITER ;
 
+SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
+												 WHERE ClientOrder.client_id = 6
+												 ORDER BY order_delivery_date DESC LIMIT 1);
+SELECT @vSelecDate;
+SELECT STR_TO_DATE(@vSelecDate, '%Y-%m-%d') + 14;
+SELECT (CURRENT_DATE + 14);
+SELECT (DATEDIFF(CURRENT_DATE, '2022-03-29'));
 SET @XD = (getstr_ClnDevDays(2));
 SELECT (@XD IS NULL);
 SELECT * FROM DeliveryInterval;
