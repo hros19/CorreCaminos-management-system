@@ -927,7 +927,7 @@ BEGIN
 		ELSE
 			-- No previous deliveries. New client, maybe.
       IF (@vTotalDeliv = 0) THEN
-				SET @vSelecDate = getCloseDate(@vDayOne, @vDayTwo);
+				SET @vSelecDate = getCloserDate(@vDayOne, @vDayTwo);
         INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
@@ -944,13 +944,23 @@ BEGIN
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
 					SELECT @ID; --  We return the id for asociate the order details.
+				-- If the last delivery was on the past or is the current day we just
+        -- select the next delivery day.
+				ELSE
+					-- If this happens, we need to move to the next dev day.
+          SET @vSelecDate = getCloserDay(@vDayOne, @vDayTwo);
+          INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
+					VALUES (pClientId, pStatus, @vSelecDate);
+					SET @ID = LAST_INSERT_ID();
+					SELECT @ID; --  We return the id for asociate the order details.
 				END IF;
       END IF;
     END IF;
   END IF;
 END $$
 DELIMITER ;
-
+-- SEGUIR CON DEMAS CASOS DE LA FUNCION DE ARRIBA.
+USE correcaminosdb;
 -- FALSE 0
 SELECT (DAYNAME(CURRENT_DATE + 7));
 
