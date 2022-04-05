@@ -881,7 +881,7 @@ BEGIN
   IF (@vDays IS NULL) THEN SELECT 'No registered days' AS ERROR; END IF;
   SET @vDevInterval = (SELECT devint.dev_interval_name FROM DeliveryInterval devint 
 											 LEFT JOIN Client ON Client.dev_interval_id = devint.dev_interval_id
-											 WHERE client_id = 6);
+											 WHERE client_id = pClientId);
 	SET @vTotalDeliv = (SELECT COUNT(*) FROM ClientOrder WHERE client_id = pClientId);
 	IF (@vDevInterval = 'TWO_PER_WEEK') THEN
 		SET @vDayOne = SUBSTRING_INDEX(@vDays, ",", 1);
@@ -963,10 +963,12 @@ BEGIN
     END IF; -- TWO_PER_WEEK, 1 DAY OR 2 DAYS.
 	ELSEIF (@vDevInterval = 'WEEKLY') THEN
 		SET @vDay = SUBSTRING_INDEX(@vDays, ",", 1);
+    SELECT @vDay;
 		-- No previous deliverys, select next day.
     SET @vSelecDay = getNextDateOf(@vDay);
+    SELECT @vSelecDay;
     INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
-		VALUES (pClientId, pStatus, @vSelecDate);
+		VALUES (pClientId, pStatus, @vSelecDay);
 		SET @ID = LAST_INSERT_ID();
 		SELECT @ID; --  We return the id for asociate the order details.
 	ELSEIF (@vDevInterval = 'DAILY') THEN
@@ -1044,38 +1046,6 @@ BEGIN
   END IF;
 END $$
 DELIMITER ;
-
-SET @vSelecDate = (SELECT order_delivery_date FROM ClientOrder
-												 WHERE ClientOrder.client_id = 6
-												 ORDER BY order_delivery_date DESC LIMIT 1);
-SELECT @vSelecDate;
-SELECT STR_TO_DATE(@vSelecDate, '%Y-%m-%d') + 14;
-SELECT (CURRENT_DATE + 14);
-SELECT (DATEDIFF(CURRENT_DATE, '2022-03-29'));
-SET @XD = (getstr_ClnDevDays(2));
-SELECT (@XD IS NULL);
-SELECT * FROM DeliveryInterval;
--- FALSE 0
-SELECT (DAYNAME(CURRENT_DATE + 7));
-select * from ClientXDevDay;
-SELECT order_delivery_date FROM ClientOrder
-WHERE ClientOrder.client_id = 6 ORDER BY order_delivery_date DESC LIMIT 1;
-
-SELECT COUNT(*) FROM ClientOrder WHERE client_id = 5;
-DELETE FROM ClientOrder;
-SELECT * FROM ClientOrder;
-INSERT INTO ClientOrder (client_id, order_status, order_delivery_date) VALUES (6, 'PENDING', '2022-04-01');
-CALL create_clientOrder(6, 'PENDING');
-
-UPDATE Client
-SET dev_interval_id = 2 WHERE client_id = 6;
-SELECT * FROM Client;
-SELECT * FROM ClientXDevDay;
-DELETE FROM ClientXDevDay;
-INSERT INTO ClientXDevDay (client_id, dev_day_id) VALUES (6, 11);
-CALL create_clientxdevday(6, 13);
-
-CALL create_clientOrder(3, 'xd');
 
 DELIMITER $$
 DROP FUNCTION IF EXISTS getCloserDay$$
