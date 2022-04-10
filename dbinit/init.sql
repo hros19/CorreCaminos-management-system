@@ -16,7 +16,6 @@ SET GLOBAL event_scheduler = ON;
 TABLE Vehicle
 All the information of the vehicles of the company.
 */
-DROP TABLE Vehicle;
 CREATE TABLE Vehicle (
 	vehicle_id INT NOT NULL AUTO_INCREMENT,
 	car_brand VARCHAR(255) NOT NULL,
@@ -207,11 +206,13 @@ CREATE TABLE MaintenanceLog (
     ON DELETE CASCADE
 );
 
--- pendiente
+-- pendiente mantenimiento de los vehiculos
+/*
 CREATE EVENT myEvent
 	ON SCHEDULE EVERY 10 SECOND
 		DO
 			CALL reportMaintenance(1, "Hola");
+*/
 
 /*
 PROCEDURE create_maint_log
@@ -608,7 +609,6 @@ END $$
 DELIMITER ;
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_client_devdays$$
 CREATE PROCEDURE get_client_devdays(IN pClientId INT)
 BEGIN
 	SELECT devd.dev_day_name FROM Client
@@ -928,7 +928,7 @@ BEGIN
 		ELSE
 			-- No previous deliveries. New client, maybe.
       IF (@vTotalDeliv = 0) THEN
-				SET @vSelecDate = getCloserDate(@vDayOne, @vDayTwo);
+				SET @vSelecDate = getCloserDay(@vDayOne, @vDayTwo);
         INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
@@ -974,14 +974,14 @@ BEGIN
 	ELSEIF (@vDevInterval = 'DAILY') THEN
 		SET @vSelecDay = CURRENT_DATE + 1;
     INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
-		VALUES (pClientId, pStatus, @vSelecDate);
+		VALUES (pClientId, pStatus, @vSelecDay);
 		SET @ID = LAST_INSERT_ID();
     SELECT @ID; --  We return the id for asociate the order details.
 	ELSEIF (@vDevInterval = 'BIWEEKLY') THEN
 		SET @vDay = SUBSTRING_INDEX(@vDays, ",", 1);
 		-- If there are no previous deliveries, select the next day.
 		IF (@vTotalDeliv = 0) THEN
-				SET @vSelecDate = getNextDateOf(@vDayOne);
+				SET @vSelecDate = getNextDateOf(@vDay);
         INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
@@ -1063,9 +1063,6 @@ BEGIN
 END $$
 DELIMITER ;
 
-SELECT getCloserDay('Friday', 'Saturday');
-SELECT DATEDIFF('2022-04-20', CURRENT_DATE);
-
 DELIMITER $$
 DROP FUNCTION IF EXISTS getNextDateOf$$
 CREATE FUNCTION getNextDateOf(pDayName VARCHAR(20))
@@ -1105,12 +1102,117 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+DROP TABLE IF EXISTS ProductCategory;
+
+CREATE TABLE ProductCategory (
+	product_cat_id INT NOT NULL AUTO_INCREMENT,
+  product_cat_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_ProdCat_id
+		PRIMARY KEY (product_cat_id),
+	CONSTRAINT UQ_ProdCat_name
+		UNIQUE (product_cat_name)
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_prodCat$$
+CREATE PROCEDURE create_prodCat(IN pProdCatName VARCHAR(255))
+BEGIN
+	INSERT INTO ProductCategory (product_cat_name) 
+  VALUES (pProdCatName);
+  SET @PRODUCT_CAT_ID = LAST_INSERT_ID();
+  SELECT * FROM ProductCategory WHERE product_cat_id = @PRODUCT_CAT_ID;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_prodCategories$$
+CREATE PROCEDURE getp_prodCategories(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM ProductCategory ',
+												 'ORDER BY product_cat_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_prodCategory$$
+CREATE PROCEDURE upd_prodCategory(IN pProdCatId INT, IN pProdCatName VARCHAR(255))
+BEGIN
+	UPDATE ProductCategory
+	SET product_cat_name = pProdCatName
+	WHERE product_cat_id = pProdCatId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+DROP TABLE IF EXISTS ProductSubCategory;
+CREATE TABLE ProductSubCategory (
+	product_subcat_id INT NOT NULL AUTO_INCREMENT,
+  product_subcat_catId INT NOT NULL, 
+  product_subcat_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_ProdSubCat_id
+		PRIMARY KEY (product_subcat_id),
+	CONSTRAINT UQ_ProdSubCat_name
+		UNIQUE (product_subcat_name),
+	CONSTRAINT FK_ProdSubCat_CatId
+		FOREIGN KEY (product_subcat_catId)
+    REFERENCES ProductCategory (product_cat_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_prodSubCat$$
+CREATE PROCEDURE create_prodSubCat(IN pProdSubCatName VARCHAR(255), IN pCatId INT)
+BEGIN
+	INSERT INTO ProductSubCategory (product_subcat_name, product_subcat_catId) 
+  VALUES (pProdSubCatName, pCatId);
+  SET @PRODUCT_SUBCAT_ID = LAST_INSERT_ID();
+  SELECT * FROM ProductSubCategory WHERE product_cat_id = @PRODUCT_SUBCAT_ID;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_prodSubCategories$$
+CREATE PROCEDURE getp_prodSubCategories(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255),
+																				IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM ProductSubCategory ',
+												 'ORDER BY ', pParemeter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_prodSubCategory$$
+CREATE PROCEDURE upd_prodSubCategory(IN pProdSubCatId INT, IN pProdSubCatName VARCHAR(255))
+BEGIN
+	UPDATE ProductSubCategory
+	SET product_subcat_name = pProdSubCatName
+	WHERE product_subcat_id = pProdSubCatId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+DROP TABLE IF EXISTS Product;
+CREATE TABLE Product (
+	product_id INT NOT NULL AUTO_INCREMENT,
+  product_name VARCHAR(255) NOT NULL,
+  product_
+);
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CALL create_dev_interval('DAILY');
 CALL create_dev_interval('WEEKLY');
 CALL create_dev_interval('TWO_PER_WEEK');
 CALL create_dev_interval('BIWEEKLY');
 
-DELETE FROM DeliveryDay;
+-- DELETE FROM DeliveryDay;
 CALL create_dev_day('Monday');
 CALL create_dev_day('Tuesday');
 CALL create_dev_day('Wednesday');
@@ -1134,6 +1236,15 @@ CALL create_route('ROUTE_G', 1.3);
 CALL create_route('ROUTE_H', 4.2);
 CALL create_route('ROUTE_I', 3.3);
 CALL create_route('ROUTE_J', 2.6);
+
+DELETE FROM ProductCategory;
+CALL create_prodCat('Article');
+CALL create_prodCat('Service');
+CALL create_prodSubCat('Refresco', 3);
+CALL create_prodSubCat('Comestible', 3);
+CALL create_prodSubCat('Limpieza', 3);
+SELECT * FROM ProductCategory;
+
 
 SELECT * FROM ZoneXRoute;
 DELETE FROM ZoneXRoute;
