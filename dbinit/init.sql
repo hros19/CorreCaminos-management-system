@@ -9,9 +9,9 @@ CREATE DATABASE IF NOT EXISTS correcaminosdb;
 USE correcaminosdb;
 SET GLOBAL sql_mode='';
 SET GLOBAL event_scheduler = ON;
-
+SHOW TABLES;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+-- XXVEHICLE
 /*
 TABLE Vehicle
 All the information of the vehicles of the company.
@@ -188,7 +188,7 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+-- XXMAINTENANCELOG
 /*
 TABLE MaintenanceLog
 Table to save all the maintenance done to the company's vehicles.
@@ -206,7 +206,7 @@ CREATE TABLE MaintenanceLog (
     ON DELETE CASCADE
 );
 
--- pendiente mantenimiento de los vehiculos
+-- pendiente evento para generar reporte con los clientes con pedidos pendientes.
 /*
 CREATE EVENT myEvent
 	ON SCHEDULE EVERY 10 SECOND
@@ -261,88 +261,6 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-/*
-TABLE Driver
-Table to keep all the driver of the company.
-*/
-CREATE TABLE Driver (
-	driver_id INT NOT NULL AUTO_INCREMENT,
-	vehicle_id INT,
-  job_title_id INT,
-	driver_name VARCHAR(255) NOT NULL,
-	driver_doc_id VARCHAR(255) NOT NULL,
-	salary FLOAT NOT NULL,
-	hiring_date DATE DEFAULT (CURRENT_DATE),
-	CONSTRAINT PK_Driver 
-		PRIMARY KEY (driver_id),
-	CONSTRAINT FK_Driver_vehId 
-		FOREIGN KEY (vehicle_id)
-		REFERENCES Vehicle (vehicle_id)
-		ON DELETE SET NULL,
-	CONSTRAINT FK_JobTitle_id 
-		FOREIGN KEY (job_title_id)
-    REFERENCES JobTitle (job_title_id)
-    ON DELETE SET NULL,
-	CONSTRAINT UQ_Driver_docId 
-		UNIQUE (driver_doc_id),
-	CONSTRAINT UQ_Driver_vehId
-		UNIQUE (vehicle_id)
-);
-
-/*
-PROCEDURE create_driver
-Let insert a driver in the respective table and return the row inserted.
-*/
-DELIMITER $$
-CREATE PROCEDURE create_driver(IN pVehicleId INT, IN pJobTitleId INT, IN pDriverName VARCHAR(255),
-															 IN pDriverDocId VARCHAR(255), IN pSalary FLOAT)
-BEGIN
-	INSERT INTO Driver (vehicle_id, job_title_id, driver_name, driver_doc_id, salary)
-  VALUES (pVehicleId, pJobTitleId, pDriverName, pDriverDocId, pSalary);
-  SET @DRIVER_ID = LAST_INSERT_ID();
-  SELECT * FROM Driver WHERE driver_id = @DRIVER_ID;
-END $$
-DELIMITER ;
-
-/*
-PROCEDURE upd_driver
-Let update the information of an specific driver.
-*/
-DELIMITER $$
-CREATE PROCEDURE upd_driver(IN pDriverId INT, IN pVehicleId INT, IN pJobTitleId INT, IN pDriverName VARCHAR(255),
-														IN pDriverDocId VARCHAR(255), IN pSalary FLOAT)
-BEGIN
-	UPDATE Driver
-  SET vehicle_id = pVehicleId, job_title_id = pJobTitleId, driver_name = pDriverName,
-			driver_doc_id = pDriverDocId, salary = pSalary
-  WHERE driver_id = pDriverId;
-END $$
-DELIMITER ;
-
-/*
-PROCEDURE getp_drivers
-Get all the drivers with given order and paginations parameters.
-*/
-DELIMITER $$
-CREATE PROCEDURE getp_drivers(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), 
-															IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT Driver.driver_id, Driver.driver_name, JobTitle.job_title_name, ',
-												 'Driver.driver_doc_id, Driver.salary, Driver.hiring_date, ',
-												 'Vehicle.vehicle_id, Vehicle.car_plaque FROM Driver ',
-                         'LEFT JOIN Vehicle ON Driver.vehicle_id = Vehicle.vehicle_id ',
-                         'LEFT JOIN JobTitle ON JobTitle.job_title_id = Driver.job_title_id ',
-												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 /*
 TABLE JobTitle
 It stores all the different jobs of the company.
@@ -398,7 +316,557 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE Driver
+Table to keep all the driver of the company.
+*/
+CREATE TABLE Driver (
+	driver_id INT NOT NULL AUTO_INCREMENT,
+	vehicle_id INT,
+  job_title_id INT,
+	driver_name VARCHAR(255) NOT NULL,
+	driver_doc_id VARCHAR(255) NOT NULL,
+	salary FLOAT NOT NULL,
+	hiring_date DATE DEFAULT (CURRENT_DATE),
+	CONSTRAINT PK_Driver 
+		PRIMARY KEY (driver_id),
+	CONSTRAINT FK_Driver_vehId 
+		FOREIGN KEY (vehicle_id)
+		REFERENCES Vehicle (vehicle_id)
+		ON DELETE SET NULL,
+	CONSTRAINT FK_JobTitle_id 
+		FOREIGN KEY (job_title_id)
+    REFERENCES JobTitle (job_title_id)
+    ON DELETE SET NULL,
+	CONSTRAINT UQ_Driver_docId 
+		UNIQUE (driver_doc_id),
+	CONSTRAINT UQ_Driver_vehId
+		UNIQUE (vehicle_id)
+);
 
+/*
+PROCEDURE create_driver
+Let insert a driver in the respective table and return the row inserted.
+*/
+DELIMITER $$
+CREATE PROCEDURE create_driver(IN pVehicleId INT, IN pJobTitleId INT, IN pDriverName VARCHAR(255),
+															 IN pDriverDocId VARCHAR(255), IN pSalary FLOAT)
+BEGIN
+	INSERT INTO Driver (vehicle_id, job_title_id, driver_name, driver_doc_id, salary)
+  VALUES (pVehicleId, pJobTitleId, pDriverName, pDriverDocId, pSalary);
+  SET @DRIVER_ID = LAST_INSERT_ID();
+  SELECT * FROM Driver WHERE driver_id = @DRIVER_ID;
+END $$
+
+/*
+PROCEDURE upd_driver
+Let update the information of an specific driver.
+*/
+CREATE PROCEDURE upd_driver(IN pDriverId INT, IN pVehicleId INT, IN pJobTitleId INT, IN pDriverName VARCHAR(255),
+														IN pDriverDocId VARCHAR(255), IN pSalary FLOAT)
+BEGIN
+	UPDATE Driver
+  SET vehicle_id = pVehicleId, job_title_id = pJobTitleId, driver_name = pDriverName,
+			driver_doc_id = pDriverDocId, salary = pSalary
+  WHERE driver_id = pDriverId;
+END $$
+
+/*
+PROCEDURE getp_drivers
+Get all the drivers with given order and paginations parameters.
+*/
+CREATE PROCEDURE getp_drivers(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), 
+															IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT Driver.driver_id, Driver.driver_name, JobTitle.job_title_name, ',
+												 'Driver.driver_doc_id, Driver.salary, Driver.hiring_date, ',
+												 'Vehicle.vehicle_id, Vehicle.car_plaque FROM Driver ',
+                         'LEFT JOIN Vehicle ON Driver.vehicle_id = Vehicle.vehicle_id ',
+                         'LEFT JOIN JobTitle ON JobTitle.job_title_id = Driver.job_title_id ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Initial data from the tables above...
+CALL create_vehicle('Nissan', 'ABC-123', 'Diesel', 50, 40, 300);
+CALL create_vehicle('Toyota', 'XYZ-456', 'Premium', 30, 20, 150);
+CALL create_vehicle('Tesla', 'MMM-111', 'Normal', 100, 96, 0);
+
+CALL create_maint_log(1, 'Frenos averiados');
+CALL create_maint_log(1, 'Cambio de aceite');
+CALL create_maint_log(1, 'Cambio de luces traseras');
+CALL create_maint_log(2, 'Cambio de transmisión');
+
+CALL create_job_title('Promotor');
+CALL create_job_title('Repartidor');
+
+CALL create_driver(1, 1, 'Johnny Arias', '788991010', 2000);
+CALL create_driver(2, 2, 'Marcos Rivera', '712345050', 3000);
+CALL create_driver(3, 2, 'Ronny Diaz', '790901234', 3500);
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+Table: GeologicalAddress
+Description: The purpose for this table is to contain the geological information of each client.
+*/
+CREATE TABLE GeologicalAddress (
+	geo_address_id INT NOT NULL AUTO_INCREMENT,
+  latitude FLOAT NOT NULL,
+  longitude FLOAT NOT NULL,
+  geo_point POINT NOT NULL,
+  CONSTRAINT PK_GeoAddrId
+		PRIMARY KEY (geo_address_id),
+	CONSTRAINT UQ_GeoAddrLatLong
+		UNIQUE (latitude, longitude)
+);
+
+/*
+FUNCTION: create_geo_addr
+DESCRIPTION: Create a register on the table GeologicalAddress and returns the id of the row.
+The purpose of this function is for being used in a create_Client procedure, we would call
+this function to asign the new client with the geological address.
+*/
+DELIMITER $$
+CREATE FUNCTION create_geo_addr(pLatitude FLOAT, pLongitude FLOAT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @vPoint = POINT(pLatitude, pLongitude);
+	INSERT INTO GeologicalAddress (latitude, longitude, geo_point) VALUES (pLatitude, pLongitude, @vPoint);
+  SET @ID = LAST_INSERT_ID();
+  RETURN @ID;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: DeliveryDay
+DESCRIPTION: Is literally just a table for 'DaysOfWeek', I dont remember why I did this. :P
+*/
+CREATE TABLE DeliveryDay (
+	dev_day_id INT NOT NULL AUTO_INCREMENT,
+  dev_day_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_DevDayId
+		PRIMARY KEY (dev_day_id),
+	CONSTRAINT UQ_DevDayName
+		UNIQUE (dev_day_name)
+);
+
+/*
+PROCEDURE: create_dev_day
+DESCRIPTION: just register the new day and returns it.
+Maybe is just an unnecesary functionality, we can just insert the days manually.
+*/
+DELIMITER $$
+CREATE PROCEDURE create_dev_day(IN pDevDayName VARCHAR(255))
+BEGIN
+	INSERT INTO DeliveryDay (dev_day_name) VALUES (pDevDayName);
+  SET @ID = LAST_INSERT_ID();
+  SELECT * FROM DeliveryDay WHERE dev_day_id = @ID;
+END $$
+
+/*
+PROCEDURE: getp_dev_days
+DESCRIPTION: Return all the delivery days with pagination parameters.
+*/
+CREATE PROCEDURE getp_dev_days(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM DeliveryDay ',
+												 'ORDER BY dev_day_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+/*
+PROCEDURE: upd_dev_day
+DESCRIPTION: Update an actually delivery day.
+*/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_dev_day$$
+CREATE PROCEDURE upd_dev_day(IN pDevDayId INT, IN pDevDayName VARCHAR(255))
+BEGIN
+	UPDATE DeliveryDay
+  SET dev_dev_name = pDevDayName WHERE dev_day_id = pDevDayId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: DeliveryInterval
+DESCRIPTION: The interval of how much a Client can make orders.
+{DAILY, TWO_PER_WEEK, WEEKLY, BIWEEKLY}
+*/
+CREATE TABLE DeliveryInterval (
+	dev_interval_id INT NOT NULL AUTO_INCREMENT,
+  dev_interval_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_DevIntervId
+		PRIMARY KEY (dev_interval_id),
+	CONSTRAINT UQ_DevIntervName
+		UNIQUE (dev_interval_name)
+);
+
+/*
+PROCEDURE: create_dev_interval
+DESCRIPTION: Creates a new delivery interval
+*/
+DELIMITER $$
+CREATE PROCEDURE create_dev_interval(IN pDevIntervalName VARCHAR(255))
+BEGIN
+	INSERT INTO DeliveryInterval (dev_interval_name) VALUES (pDevIntervalName);
+  SET @DEV_INTERV_ID = LAST_INSERT_ID();
+  SELECT * FROM DeliveryInterval WHERE dev_interval_id = @DEV_INTERV_ID;
+END $$
+
+/*
+PROCEDURE: getp_dev_intervals
+DESCRIPTION: Get all the delivery intervals with pagination parameters.
+*/
+CREATE PROCEDURE getp_dev_intervals(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM DeliveryInterval ',
+												 'ORDER BY dev_interval_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: upd_dev_interval
+DESCRIPTION: Update an existing delivery interval.
+*/
+CREATE PROCEDURE upd_dev_interval(IN pDevIntervalId INT, IN pDevIntervalName VARCHAR(255))
+BEGIN
+	UPDATE DeliveryInterval
+  SET dev_interval_name = pDevIntervalName WHERE dev_interval_id = pDevIntervalId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: BusinessType
+DESCRIPTION: New business type for distinguish some clients
+*/
+CREATE TABLE BusinessType (
+	business_type_id INT NOT NULL AUTO_INCREMENT,
+  business_type_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_BussinessType
+		PRIMARY KEY (business_type_id),
+	CONSTRAINT UQ_BusinessTypeName
+		UNIQUE (business_type_name)
+);
+
+/*
+PROCEDURE: create_buss_type
+DESCRIPTION: Inserts a new business type on the table and returns it.
+*/
+DELIMITER $$
+CREATE PROCEDURE create_buss_type(IN pBussTypeName VARCHAR(255))
+BEGIN
+	INSERT INTO BusinessType (business_type_name) VALUES (pBussTypeName);
+  SET @BUSS_TYPE_ID = LAST_INSERT_ID();
+  SELECT * FROM BusinessType WHERE business_type_id = @BUSS_TYPE_ID;
+END $$
+
+/*
+PROCEDURE: getp_buss_types
+DESCRIPTION: Returns all the business types registered with pagination parameters.
+*/
+CREATE PROCEDURE getp_buss_types(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM BusinessType ',
+												 'ORDER BY business_type_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: upd_business_type
+DESCRIPTION: Update an existing business type from the table.
+*/
+CREATE PROCEDURE upd_business_type(IN pBusTypeId INT, IN pBusTypeName VARCHAR(255))
+BEGIN
+	UPDATE BusinessType
+  SET business_type_name = pBusTypeName WHERE business_type_id = pBusTypeId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: Zone
+DESCRIPTION: New zone for the ubications of the Clients.
+*/
+CREATE TABLE Zone (
+	zone_id INT NOT NULL AUTO_INCREMENT,
+  zone_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_Zone
+		PRIMARY KEY (zone_id),
+	CONSTRAINT UQ_Zone_Name
+		UNIQUE (zone_name)
+);
+
+/*
+PROCEDURE: create_zone
+DESCRIPTION: Register a new zone in the table.
+*/
+DELIMITER $$
+CREATE PROCEDURE create_zone(IN pZoneName VARCHAR(255))
+BEGIN
+	INSERT INTO Zone (zone_name) VALUES (pZoneName);
+  SET @ZONE_ID = LAST_INSERT_ID();
+  SELECT * FROM Zone WHERE zone_id = @ZONE_ID;
+END $$
+
+/*
+PROCEDURE: getp_zones
+DESCRIPTION: Get all the zones from the table with pagination parameters.
+*/
+CREATE PROCEDURE getp_zones(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM Zone ',
+												 'ORDER BY zone_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: upd_zone
+DESCRIPTION: updates and exisiting zone from the table.
+*/
+CREATE PROCEDURE upd_zone(IN pZoneId INT, IN pZoneName VARCHAR(255))
+BEGIN
+	UPDATE Zone
+  SET zone_name = pZoneName WHERE zone_id = pZoneId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: Route
+DESCRIPTION: Routes would be asociated with a zone.
+*/
+CREATE TABLE Route (
+	route_id INT NOT NULL AUTO_INCREMENT,
+  route_name VARCHAR(255) NOT NULL,
+  route_distance_km FLOAT NOT NULL,
+  CONSTRAINT PK_Route
+		PRIMARY KEY (route_id),
+	CONSTRAINT UQ_Route_Name
+		UNIQUE (route_name)
+);
+
+DELIMITER $$
+/*
+PROCEDURE: create_route
+DESCRIPTION: register a new route in the table.
+*/
+CREATE PROCEDURE create_route(IN pRouteName VARCHAR(255), IN pRouteDistanceKm FLOAT)
+BEGIN
+	INSERT INTO Route (route_name, route_distance_km) 
+  VALUES (pRouteName, pRouteDistanceKm);
+  SET @ROUTE_ID = LAST_INSERT_ID();
+  SELECT * FROM Route WHERE route_id = @ROUTE_ID;
+END $$
+
+/*
+PROCEDURE: getp_routes
+DESCRIPTION: Get all the routes with pagination parameters.
+*/
+CREATE PROCEDURE getp_routes(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM Route ',
+												 'ORDER BY route_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: upd_route
+DESCRIPTION: Update an existing route from the table.
+*/
+CREATE PROCEDURE upd_route(IN pRouteId INT, IN pRouteName VARCHAR(255),
+													 IN pRouteDistanceKm FLOAT)
+BEGIN
+	IF (pRouteDistanceKm > 0 AND pRouteName != "")
+		THEN
+			UPDATE Route
+			SET route_name = pRouteName, route_distance_km = pRouteDistanceKm
+      WHERE route_id = pRouteId;
+		ELSE SELECT 'Invalid inputs' AS 'Error';
+	END IF;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: ZoneXRoute
+DESCRIPTION: Stablish a relationship from Routes and Zones.
+*/
+CREATE TABLE ZoneXRoute (
+	zone_id INT NOT NULL,
+  route_id INT NOT NULL,
+  CONSTRAINT PK_ZoneXRoute_id
+		PRIMARY KEY (zone_id, route_id),
+	CONSTRAINT FK_Zone_id
+		FOREIGN KEY (zone_id)
+		REFERENCES Zone (zone_id)
+    ON DELETE CASCADE,
+	CONSTRAINT FK_Route_id
+		FOREIGN KEY (route_id)
+    REFERENCES Route (route_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+/*
+PROCEDURE: create_zonexroute
+DESCRIPTION: Creates a new relationship from a zone and a route and returns the information of the row.
+*/
+CREATE PROCEDURE create_zonexroute(IN pZoneId INT, IN pRouteId INT)
+BEGIN
+	INSERT INTO ZoneXRoute (zone_id, route_id)
+	VALUES (pZoneId, pRouteId);
+  SELECT Zone.zone_name, zxr.zone_id, Route.route_name, zxr.route_id FROM ZoneXRoute zxr
+  RIGHT JOIN Zone ON zxr.zone_id = Zone.zone_id
+  LEFT JOIN Route ON zxr.route_id = Route.route_id
+  WHERE ( ((Zone.zone_id, Route.route_id) = (pZoneId, pRouteId)) AND Route.route_name != '' AND Zone.zone_name != '');
+END $$
+
+/*
+PROCEDURE: rem_zonexroute
+DESCRIPTION: Deasociate a zone with a route.
+*/
+CREATE PROCEDURE rem_zonexroute(IN pZoneId INT, IN pRouteId INT)
+BEGIN
+	DELETE FROM ZoneXRoute
+  WHERE (zone_id, route_id) = (pZoneId, pRouteId);
+END $$
+
+/*
+PROCEDURE: getp_zone_routes
+DESCRIPTION: Get all the zone and routes with pagination parameters.
+*/
+CREATE PROCEDURE getp_zone_routes(IN pZoneId INT, IN pOrder VARCHAR(255),
+																	IN pStart INT, IN pElemPerPage INT)
+BEGIN
+  SELECT Route.route_id, Route.route_name FROM Zone
+  INNER JOIN ZoneXRoute ON ZoneXRoute.zone_id = 1
+  INNER JOIN Route ON ZoneXRoute.route_id = Route.route_id
+  WHERE Zone.zone_id = 1
+  LIMIT pStart, pElemPerPage;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Initial information from the tables above.
+CALL create_dev_day('Monday');
+CALL create_dev_day('Tuesday');
+CALL create_dev_day('Wednesday');
+CALL create_dev_day('Thursday');
+CALL create_dev_day('Friday');
+CALL create_dev_day('Saturday');
+CALL create_dev_day('Sunday');
+
+CALL create_dev_interval('DAILY');
+CALL create_dev_interval('WEEKLY');
+CALL create_dev_interval('TWO_PER_WEEK');
+CALL create_dev_interval('BIWEEKLY');
+
+CALL create_buss_type('Chino');
+CALL create_buss_type('Supermercado');
+CALL create_buss_type('Gasolinera');
+CALL create_buss_type('Automercado');
+CALL create_buss_type('Restaurante');
+
+CALL create_zone('Norte');
+CALL create_zone('Central');
+CALL create_zone('Sur');
+
+CALL create_route('Ruta_A', 13.5);
+CALL create_route('Ruta_B', 2.2);
+CALL create_route('Ruta_C', 10.4);
+CALL create_route('Ruta_D', 15.9);
+CALL create_route('Ruta_E', 6.5);
+CALL create_route('Ruta_F', 7.8);
+CALL create_route('Ruta_G', 0.7);
+CALL create_route('Ruta_H', 1.5);
+CALL create_route('Ruta_I', 4.8);
+
+CALL create_zonexroute(1, 1);
+CALL create_zonexroute(1, 2);
+CALL create_zonexroute(1, 3);
+CALL create_zonexroute(2, 4);
+CALL create_zonexroute(2, 5);
+CALL create_zonexroute(2, 6);
+CALL create_zonexroute(3, 7);
+CALL create_zonexroute(3, 8);
+CALL create_zonexroute(3, 9);
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CREATE TABLE Supplier (
+	supplier_id INT NOT NULL AUTO_INCREMENT,
+  supplier_name VARCHAR(255) NOT NULL,
+  formal_address VARCHAR(255) NOT NULL,
+  phone_number VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  have_delivery VARCHAR(5) NOT NULL DEFAULT 'YES',
+  CONSTRAINT PK_Supplier
+		PRIMARY KEY Supplier (supplier_id),
+	CONSTRAINT UQ_Supplier_Name
+		UNIQUE (supplier_name),
+	CONSTRAINT UQ_Supplier_email
+		UNIQUE (email),
+	CONSTRAINT UQ_Supplier_Phone
+		UNIQUE (phone_number)
+);
+
+DELIMITER $$
+/*
+PROCEDURE: create_supplier
+DESCRIPTION: register a new supplier in the table and returns it.
+*/
+CREATE PROCEDURE create_supplier(IN pName VARCHAR(255), IN pAddress VARCHAR(255),
+																 IN pPhone VARCHAR(255), IN pEmail VARCHAR(255), 
+                                 IN pHaveDelivery VARCHAR(25))
+BEGIN
+	INSERT INTO Supplier (supplier_name, formal_address, phone_number, email, have_delivery) 
+  VALUES (pName, pAddress, pPhone, pEmail, pHaveDelivery);
+  SET @ID = LAST_INSERT_ID();
+  SELECT * FROM Supplier WHERE supplier_id = @ID;
+END $$
+
+/*
+PROCEDURE: upd_supplier
+DESCRIPTION: Update the main information of an existing supplier.
+*/
+CREATE PROCEDURE upd_supplier(IN pSupplierId INT, IN pName VARCHAR(255), IN pAddress VARCHAR(255),
+															IN pPhone VARCHAR(255), IN pEmail VARCHAR(255), 
+															IN pHaveDelivery VARCHAR(25))
+BEGIN
+	UPDATE Supplier
+  SET supplier_name = pName, formal_address = pAddress, phone_number = pPhone, email = pEmail,
+			have_delivery = pHaveDelivery
+	WHERE supplier_id = pSupplierId;
+END $$
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: Client
+DESCRIPTION: Table for all the clients of the company.
+*/
 CREATE TABLE Client (
 	client_id INT NOT NULL AUTO_INCREMENT,
   geo_address_id INT,
@@ -437,7 +905,10 @@ CREATE TABLE Client (
 ); 
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_client$$
+/*
+PROCEDURE: upd_client
+DESCRIPTION: Update the information of an existing client.
+*/
 CREATE PROCEDURE upd_client(IN pClientId INT, IN pBussTypeId INT,
 													IN pBussName VARCHAR(255), IN pBussRep VARCHAR(255),
                           IN pPhoneNumber VARCHAR(255), IN pEmail VARCHAR(255),
@@ -448,12 +919,11 @@ BEGIN
 			phone_number = pPhoneNumber, email = pEmail, formal_address = pFormalAddress
 	WHERE client_id = pClientId;
 END $$
-DELIMITER ;
 
-CALL upd_client(5, 3, 'SuperCorales 3', 'Li Cheng', '88889092', 'Chen@mail.com', 'Conchinchina');
-SELECT * FROM CLIENT;
-
-DELIMITER $$
+/*
+PROCEDURE: create_client
+DESCRIPTION: Register a new client on the table.
+*/
 CREATE PROCEDURE create_client(IN pZoneId INT, IN pDevIntervalId INT, IN pBussTypeId INT,
 															 IN pBussName VARCHAR(255), IN pBussRep VARCHAR(255),
 															 IN pPhoneNumber VARCHAR(255), IN pEmail VARCHAR(255),
@@ -478,9 +948,13 @@ BEGIN
 		SELECT 'Duplicated values' AS 'Error';
 	END IF;
 END $$
-DELIMITER ;
 
-DELIMITER $$
+-- TODO: getp_clients.
+
+/*
+PROCEDURE isValueInTable
+DESCRIPTION: Ask if a value is in a specific table.
+*/
 CREATE PROCEDURE isValueInTable(IN pTable VARCHAR(255), IN pColumn VARCHAR(255), IN pValue VARCHAR(255),
 																OUT result INT)
 BEGIN
@@ -496,71 +970,10 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CREATE TABLE GeologicalAddress (
-	geo_address_id INT NOT NULL AUTO_INCREMENT,
-  latitude FLOAT NOT NULL,
-  longitude FLOAT NOT NULL,
-  geo_point POINT NOT NULL,
-  CONSTRAINT PK_GeoAddrId
-		PRIMARY KEY (geo_address_id),
-	CONSTRAINT UQ_GeoAddrLatLong
-		UNIQUE (latitude, longitude)
-);
-
-DELIMITER $$
-CREATE FUNCTION create_geo_addr(pLatitude FLOAT, pLongitude FLOAT)
-	RETURNS INT DETERMINISTIC
-BEGIN
-	SET @vPoint = POINT(pLatitude, pLongitude);
-	INSERT INTO GeologicalAddress (latitude, longitude, geo_point) VALUES (pLatitude, pLongitude, @vPoint);
-  SET @ID = LAST_INSERT_ID();
-  RETURN @ID;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CREATE TABLE DeliveryDay (
-	dev_day_id INT NOT NULL AUTO_INCREMENT,
-  dev_day_name VARCHAR(255) NOT NULL,
-  CONSTRAINT PK_DevDayId
-		PRIMARY KEY (dev_day_id),
-	CONSTRAINT UQ_DevDayName
-		UNIQUE (dev_day_name)
-);
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_dev_day$$
-CREATE PROCEDURE create_dev_day(IN pDevDayName VARCHAR(255))
-BEGIN
-	INSERT INTO DeliveryDay (dev_day_name) VALUES (pDevDayName);
-  SET @ID = LAST_INSERT_ID();
-  SELECT * FROM DeliveryDay WHERE dev_day_id = @ID;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_dev_days$$
-CREATE PROCEDURE getp_dev_days(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM DeliveryDay ',
-												 'ORDER BY dev_day_name ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_dev_day$$
-CREATE PROCEDURE upd_dev_day(IN pDevDayId INT, IN pDevDayName VARCHAR(255))
-BEGIN
-	UPDATE DeliveryDay
-  SET dev_dev_name = pDevDayName WHERE dev_day_id = pDevDayId;
-END $$
-DELIMITER ;
-
-DROP TABLE IF EXISTS ClientXDevDay;
+/*
+TABLE: ClientXDevDay
+Description: Allow to asociate clients with their respectives delivery days.
+*/
 CREATE TABLE ClientXDevDay (
 	client_id INT NOT NULL,
   dev_day_id INT NOT NULL,
@@ -577,7 +990,10 @@ CREATE TABLE ClientXDevDay (
 );
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS create_clientxdevday$$
+/*
+PROCEDURE: create_clientxdevday
+DESCRIPTION: Create a new asociation of a client and a delivery day.
+*/
 CREATE PROCEDURE create_clientxdevday(IN pClientId INT, IN pDevDayId INT)
 BEGIN
 	SET @vDevIntervalName = (SELECT dev_interval_name FROM DeliveryInterval
@@ -597,18 +1013,21 @@ BEGIN
 		ELSE SELECT 'Limit of days passed' AS 'Error';
 	END CASE;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS rem_clientxdevday$$
+/*
+PROCEDURE: rem_clientxdevday
+DESCRIPTION Remove an asociation of a client and a delivery day.
+*/
 CREATE PROCEDURE rem_clientxdevday(IN pClientId INT, IN pDevDayId INT)
 BEGIN
 	DELETE FROM ClientXDevDay
   WHERE (client_id, dev_day_id) = (pClientId, pDevDayId);
 END $$
-DELIMITER ;
 
-DELIMITER $$
+/*
+PROCEDURE: get_client_devdays
+DESCRIPTION: Return all the delivery days of a client.
+*/
 CREATE PROCEDURE get_client_devdays(IN pClientId INT)
 BEGIN
 	SELECT devd.dev_day_name FROM Client
@@ -619,229 +1038,10 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-CREATE TABLE DeliveryInterval (
-	dev_interval_id INT NOT NULL AUTO_INCREMENT,
-  dev_interval_name VARCHAR(255) NOT NULL,
-  CONSTRAINT PK_DevIntervId
-		PRIMARY KEY (dev_interval_id),
-	CONSTRAINT UQ_DevIntervName
-		UNIQUE (dev_interval_name)
-);
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_dev_interval$$
-CREATE PROCEDURE create_dev_interval(IN pDevIntervalName VARCHAR(255))
-BEGIN
-	INSERT INTO DeliveryInterval (dev_interval_name) VALUES (pDevIntervalName);
-  SET @DEV_INTERV_ID = LAST_INSERT_ID();
-  SELECT * FROM DeliveryInterval WHERE dev_interval_id = @DEV_INTERV_ID;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_dev_intervals$$
-CREATE PROCEDURE getp_dev_intervals(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM DeliveryInterval ',
-												 'ORDER BY dev_interval_name ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_dev_interval$$
-CREATE PROCEDURE upd_dev_interval(IN pDevIntervalId INT, IN pDevIntervalName VARCHAR(255))
-BEGIN
-	UPDATE DeliveryInterval
-  SET dev_interval_name = pDevIntervalName WHERE dev_interval_id = pDevIntervalId;
-END $$
-DELIMITER ;
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CREATE TABLE BusinessType (
-	business_type_id INT NOT NULL AUTO_INCREMENT,
-  business_type_name VARCHAR(255) NOT NULL,
-  CONSTRAINT PK_BussinessType
-		PRIMARY KEY (business_type_id),
-	CONSTRAINT UQ_BusinessTypeName
-		UNIQUE (business_type_name)
-);
-
-DELIMITER $$
-CREATE PROCEDURE create_buss_type(IN pBussTypeName VARCHAR(255))
-BEGIN
-	INSERT INTO BusinessType (business_type_name) VALUES (pBussTypeName);
-  SET @BUSS_TYPE_ID = LAST_INSERT_ID();
-  SELECT * FROM BusinessType WHERE business_type_id = @BUSS_TYPE_ID;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-CREATE PROCEDURE getp_buss_types(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM BusinessType ',
-												 'ORDER BY business_type_name ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS upd_business_type;
-DELIMITER $$
-CREATE PROCEDURE upd_business_type(IN pBusTypeId INT, IN pBusTypeName VARCHAR(255))
-BEGIN
-	UPDATE BusinessType
-  SET business_type_name = pBusTypeName WHERE business_type_id = pBusTypeId;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CREATE TABLE Zone (
-	zone_id INT NOT NULL AUTO_INCREMENT,
-  zone_name VARCHAR(255) NOT NULL,
-  CONSTRAINT PK_Zone
-		PRIMARY KEY (zone_id),
-	CONSTRAINT UQ_Zone_Name
-		UNIQUE (zone_name)
-);
-
-DELIMITER $$
-CREATE PROCEDURE create_zone(IN pZoneName VARCHAR(255))
-BEGIN
-	INSERT INTO Zone (zone_name) VALUES (pZoneName);
-  SET @ZONE_ID = LAST_INSERT_ID();
-  SELECT * FROM Zone WHERE zone_id = @ZONE_ID;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-CREATE PROCEDURE getp_zones(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM Zone ',
-												 'ORDER BY zone_name ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-CREATE PROCEDURE upd_zone(IN pZoneId INT, IN pZoneName VARCHAR(255))
-BEGIN
-	UPDATE Zone
-  SET zone_name = pZoneName WHERE zone_id = pZoneId;
-END $$
-DELIMITER ;
-
-CREATE TABLE ZoneXRoute (
-	zone_id INT NOT NULL,
-  route_id INT NOT NULL,
-  CONSTRAINT PK_ZoneXRoute_id
-		PRIMARY KEY (zone_id, route_id),
-	CONSTRAINT FK_Zone_id
-		FOREIGN KEY (zone_id)
-		REFERENCES Zone (zone_id)
-    ON DELETE CASCADE,
-	CONSTRAINT FK_Route_id
-		FOREIGN KEY (route_id)
-    REFERENCES Route (route_id)
-    ON DELETE CASCADE
-);
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_zonexroute$$
-CREATE PROCEDURE create_zonexroute(IN pZoneId INT, IN pRouteId INT)
-BEGIN
-	INSERT INTO ZoneXRoute (zone_id, route_id)
-	VALUES (pZoneId, pRouteId);
-  SELECT Zone.zone_name, zxr.zone_id, Route.route_name, zxr.route_id FROM ZoneXRoute zxr
-  RIGHT JOIN Zone ON zxr.zone_id = Zone.zone_id
-  LEFT JOIN Route ON zxr.route_id = Route.route_id
-  WHERE ( ((Zone.zone_id, Route.route_id) = (pZoneId, pRouteId)) AND Route.route_name != '' AND Zone.zone_name != '');
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS rem_zonexroute$$
-CREATE PROCEDURE rem_zonexroute(IN pZoneId INT, IN pRouteId INT)
-BEGIN
-	DELETE FROM ZoneXRoute
-  WHERE (zone_id, route_id) = (pZoneId, pRouteId);
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_zone_routes$$
-CREATE PROCEDURE getp_zone_routes(IN pZoneId INT, IN pOrder VARCHAR(255),
-																	IN pStart INT, IN pElemPerPage INT)
-BEGIN
-  SELECT Route.route_id, Route.route_name FROM Zone
-  INNER JOIN ZoneXRoute ON ZoneXRoute.zone_id = 1
-  INNER JOIN Route ON ZoneXRoute.route_id = Route.route_id
-  WHERE Zone.zone_id = 1
-  LIMIT pStart, pElemPerPage;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DROP TABLE IF EXISTS Route;
-CREATE TABLE Route (
-	route_id INT NOT NULL AUTO_INCREMENT,
-  route_name VARCHAR(255) NOT NULL,
-  route_distance_km FLOAT NOT NULL,
-  CONSTRAINT PK_Route
-		PRIMARY KEY (route_id),
-	CONSTRAINT UQ_Route_Name
-		UNIQUE (route_name)
-);
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_route$$
-CREATE PROCEDURE create_route(IN pRouteName VARCHAR(255), IN pRouteDistanceKm FLOAT)
-BEGIN
-	INSERT INTO Route (route_name, route_distance_km) 
-  VALUES (pRouteName, pRouteDistanceKm);
-  SET @ROUTE_ID = LAST_INSERT_ID();
-  SELECT * FROM Route WHERE route_id = @ROUTE_ID;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_routes$$
-CREATE PROCEDURE getp_routes(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM Route ',
-												 'ORDER BY route_name ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_route$$
-CREATE PROCEDURE upd_route(IN pRouteId INT, IN pRouteName VARCHAR(255),
-													 IN pRouteDistanceKm FLOAT)
-BEGIN
-	IF (pRouteDistanceKm > 0 AND pRouteName != "")
-		THEN
-			UPDATE Route
-			SET route_name = pRouteName, route_distance_km = pRouteDistanceKm
-      WHERE route_id = pRouteId;
-		ELSE SELECT 'Invalid inputs' AS 'Error';
-	END IF;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DROP TABLE ClientOrder;
+/*
+Table: ClientOrder
+DESCRIPTION: Would keep all the orders of the clients.
+*/
 CREATE TABLE ClientOrder (
 	client_order_id INT NOT NULL AUTO_INCREMENT,
   client_id INT NOT NULL,
@@ -856,12 +1056,11 @@ CREATE TABLE ClientOrder (
     ON DELETE RESTRICT
 );
 
-INSERT INTO ClientOrder (client_id, order_status, order_date)
-VALUES (6, 'PENDING', '2022-03-05');
-
-
 DELIMITER $$
-DROP FUNCTION IF EXISTS getstr_ClnDevDays$$
+/*
+FUNCTION: getstr_ClnDevDays
+DESCRIPTION: Get in a string all the delivery days of a specific client.
+*/
 CREATE FUNCTION getstr_ClnDevDays(pClientId INT)
 	RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
@@ -871,10 +1070,11 @@ set @v := (SELECT GROUP_CONCAT(dev_day_name) AS "days" FROM CLIENT
 		WHERE Client.client_id = pClientId);
 RETURN @v;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_clientOrder$$
+/*
+PROCEDURE: create_clientOrder
+DESCRIPTION: Creates a new order for a specific client.
+*/
 CREATE PROCEDURE create_clientOrder(IN pClientId INT, IN pStatus VARCHAR(255))
 BEGIN
 	SET @vDays = getstr_ClnDevDays(pClientId);
@@ -1045,10 +1245,12 @@ BEGIN
     END IF;
   END IF;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP FUNCTION IF EXISTS getCloserDay$$
+/*
+FUNCTION: getCloserDay
+DESCRIPTION: This function would take two days (I.e. Tuesday and Sunday) and 
+it will select the date of the day that is closest to the current date.
+*/
 CREATE FUNCTION getCloserDay(pDayNameA VARCHAR(20), pDayNameB VARCHAR(20))
 	RETURNS DATE DETERMINISTIC
 BEGIN
@@ -1061,10 +1263,12 @@ BEGIN
 	ELSE RETURN pDateB;
   END IF;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP FUNCTION IF EXISTS getNextDateOf$$
+/*
+FUNCTION: getNextDateOf
+DESCRIPTION: It will select the closest date of the day that is passed by 
+parameter without counting the current day.
+*/
 CREATE FUNCTION getNextDateOf(pDayName VARCHAR(20))
 	RETURNS DATE DETERMINISTIC
 BEGIN
@@ -1075,10 +1279,11 @@ BEGIN
 		END WHILE;
 		RETURN curr_date;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_clientOrders$$
+/*
+PROCEDURE: getp_clientOrders
+DESCRIPTION: Would return all the clients orders with pagination parameters.
+*/
 CREATE PROCEDURE getp_clientOrders(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1088,22 +1293,24 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_clientOrder$$
-CREATE PROCEDURE upd_clientOrder(IN pClientOrderId INT, IN pStatus VARCHAR(255),
-													 IN pRouteDistanceKm FLOAT)
+ 
+/*
+PROCEDURE: upd_clientOrder
+DESCRIPTION: Update an existing client order.
+*/
+CREATE PROCEDURE upd_clientOrder(IN pClientOrderId INT, IN pStatus VARCHAR(255))
 BEGIN
 	UPDATE ClientOrder
   SET order_status = pStatus
-  WHERE client_order_id = pOrderId;
+  WHERE client_order_id = pClientOrderId;
 END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DROP TABLE IF EXISTS ProductCategory;
-
+/*
+TABLE: ProductCategory
+DESCRIPTION: This table would keep all the product categories.
+*/
 CREATE TABLE ProductCategory (
 	product_cat_id INT NOT NULL AUTO_INCREMENT,
   product_cat_name VARCHAR(255) NOT NULL,
@@ -1114,7 +1321,10 @@ CREATE TABLE ProductCategory (
 );
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS create_prodCat$$
+/*
+PROCEDURE: create_prodCat
+DESCRIPTION: Creates a new product category
+*/
 CREATE PROCEDURE create_prodCat(IN pProdCatName VARCHAR(255))
 BEGIN
 	INSERT INTO ProductCategory (product_cat_name) 
@@ -1122,10 +1332,11 @@ BEGIN
   SET @PRODUCT_CAT_ID = LAST_INSERT_ID();
   SELECT * FROM ProductCategory WHERE product_cat_id = @PRODUCT_CAT_ID;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_prodCategories$$
+/*
+PROCEDURE: getp_prodCategories
+DESCRIPTION: Return all the product categories with pagination parameters.
+*/
 CREATE PROCEDURE getp_prodCategories(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1135,10 +1346,11 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_prodCategory$$
+/*
+PROCEDURE: upd_prodCategory
+DESCRIPTION: Update an existing product category from the table.
+*/
 CREATE PROCEDURE upd_prodCategory(IN pProdCatId INT, IN pProdCatName VARCHAR(255))
 BEGIN
 	UPDATE ProductCategory
@@ -1148,7 +1360,10 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DROP TABLE IF EXISTS ProductSubCategory;
+/*
+TABLE: ProductSubCategory
+DESCRIPTION: Table to keep the subcategories of each product.
+*/
 CREATE TABLE ProductSubCategory (
 	product_subcat_id INT NOT NULL AUTO_INCREMENT,
   product_subcat_catId INT NOT NULL, 
@@ -1164,32 +1379,53 @@ CREATE TABLE ProductSubCategory (
 );
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS create_prodSubCat$$
+/*
+PROCEDURE: create_prodSubCat
+DESCRIPTION: create a new product subcategory, asociated to an product category
+*/
 CREATE PROCEDURE create_prodSubCat(IN pProdSubCatName VARCHAR(255), IN pCatId INT)
 BEGIN
 	INSERT INTO ProductSubCategory (product_subcat_name, product_subcat_catId) 
   VALUES (pProdSubCatName, pCatId);
   SET @PRODUCT_SUBCAT_ID = LAST_INSERT_ID();
-  SELECT * FROM ProductSubCategory WHERE product_cat_id = @PRODUCT_SUBCAT_ID;
+  SELECT * FROM ProductSubCategory WHERE product_subcat_id = @PRODUCT_SUBCAT_ID;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_prodSubCategories$$
+/*
+PROCEDURE: getp_prodSubCategories
+DESCRIPTION: Get all the product sub categories with pagination parameters.
+*/
 CREATE PROCEDURE getp_prodSubCategories(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255),
 																				IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM ProductSubCategory ',
-												 'ORDER BY ', pParemeter, ' ', pOrder, ' ', 
+  SET @strQuery = CONCAT('SELECT pc.product_cat_id AS "Category_id", pc.product_cat_name AS "Category_name",',
+												 'psc.product_subcat_id AS "SubCategory_id", psc.product_subcat_name AS "SubCategory_name" ',
+												 'FROM ProductSubCategory psc ',
+                         'RIGHT JOIN ProductCategory pc ON psc.product_subcat_catId = pc.product_cat_id ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
 												 'LIMIT ', pStart, ', ', pElemPerPage);
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_prodSubCategory$$
+/*
+FUNCTION: get_subcat_cat
+DESCRIPTION: Return the id of the category of an specific subcategory.
+*/
+CREATE FUNCTION get_subcat_cat(pProdSubCatId INT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @v := (SELECT pc.product_cat_id FROM ProductSubCategory psc
+						 INNER JOIN ProductCategory pc ON psc.product_subcat_catId = pc.product_cat_id
+						 WHERE product_subcat_id = pProdSubCatId);
+	RETURN @v;
+END $$
+
+/*
+PROCEDURE: upd_prodSubCategory
+DESCRIPTION: Update an existing product subcategory.
+*/
 CREATE PROCEDURE upd_prodSubCategory(IN pProdSubCatId INT, IN pProdSubCatName VARCHAR(255))
 BEGIN
 	UPDATE ProductSubCategory
@@ -1199,19 +1435,235 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 DROP TABLE IF EXISTS Product;
 CREATE TABLE Product (
 	product_id INT NOT NULL AUTO_INCREMENT,
+  supplier_id INT NOT NULL,
   product_name VARCHAR(255) NOT NULL,
-  product_
+  product_cat_id INT NOT NULL,
+  product_subcat_id INT NOT NULL,
+  is_available VARCHAR(20) NOT NULL DEFAULT 'YES',
+  CONSTRAINT PK_Product
+		PRIMARY KEY (product_id),
+	CONSTRAINT FK_Product_catId
+		FOREIGN KEY (product_cat_id)
+    REFERENCES ProductCategory (product_cat_id)
+    ON DELETE RESTRICT,
+	CONSTRAINT FK_Product_subcatId
+		FOREIGN KEY (product_subcat_id)
+    REFERENCES ProductSubCategory (product_subcat_id)
+    ON DELETE RESTRICT,
+	CONSTRAINT UQ_Product_name
+		UNIQUE (product_name)
 );
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CALL create_dev_interval('DAILY');
-CALL create_dev_interval('WEEKLY');
-CALL create_dev_interval('TWO_PER_WEEK');
-CALL create_dev_interval('BIWEEKLY');
 
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_product$$
+CREATE PROCEDURE create_product(IN pProdName VARCHAR(255), IN pSubCatId INT,
+																IN pIsAvailable VARCHAR(10))
+BEGIN
+	SET @category_id := get_subcat_cat(pSubCatId);
+  IF (@category_id IS NULL)
+		THEN SELECT 'No subcategory with that id' AS 'Error';
+	ELSE
+		INSERT INTO Product (product_name, product_cat_id, product_subcat_id, is_available)
+		VALUES (pProdName, @category_id, pSubCatId, pIsAvailable);
+		SET @PRODUCT_ID = LAST_INSERT_ID();
+		SELECT * FROM Product WHERE product_id = @PRODUCT_ID;
+  END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_products$$
+CREATE PROCEDURE getp_products(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM Product ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upd_product$$
+CREATE PROCEDURE upd_product(IN pProductId INT, IN pProductName VARCHAR(255), IN pSubCatId INT, IN pIsAvailable VARCHAR(255))
+BEGIN
+	SET @category_id := get_subcat_cat(pSubCatId);
+  IF (@category_id IS NULL)
+		THEN SELECT 'No subcategory with that id' AS 'Error';
+	ELSE
+		UPDATE Product
+    SET product_name = pProductName, product_cat_id = @category_id, product_subcat_id = pSubCatId,
+				is_available = pIsAvailable
+		WHERE product_id = pProductId;
+  END IF;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+DROP TABLE IF EXISTS BusinessStock;
+CREATE TABLE BusinessStock(
+	product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  CONSTRAINT PK_BussStock
+		PRIMARY KEY (product_id),
+	CONSTRAINT FK_BussStock_prodId
+		FOREIGN KEY (product_id)
+    REFERENCES Product (product_id)
+    ON DELETE RESTRICT
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_businessStock$$
+CREATE PROCEDURE getp_businessStock(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM BusinessStock ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS reg_product_bussStock$$
+-- Registra productos nuevos.
+CREATE PROCEDURE reg_product_bussStock(IN pProductId INT, IN pQuantity INT)
+BEGIN
+	INSERT INTO BusinessStock (product_id, quantity)
+  VALUES (pProductId, pQuantity);
+  SELECT p.product_id, p.product_name, bs.quantity FROM BusinessStock bs
+  INNER JOIN Product p ON p.product_id = bs.product_id
+  WHERE bs.product_id = pProductId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE FUNCTION get_product_quantity(pProductId INT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @v := (SELECT quantity FROM BusinessStock WHERE product_id = pProductId);
+  return @v;
+END $$
+DELIMITER ;
+
+-- Registra mas productos a uno ya registrado.
+DELIMITER $$
+CREATE PROCEDURE fill_product_bussStock(IN pProductId INT, IN pQuantity INT)
+BEGIN
+	SET @actual_quantity := get_product_quantity(pProductId);
+  SET @new_quantity := (@actual_quantity + pQuantity);
+  UPDATE BusinessStock
+  SET quantity = @new_quantity WHERE product_id = pProductId;
+END $$
+DELIMITER ;
+
+-- Unregistra cierta cantidad de productos en stock
+DELIMITER $$
+CREATE PROCEDURE unreg_product_bussStock(IN pProductId INT, IN pQuantity INT)
+BEGIN
+	SET @actual_quantity := get_product_quantity(pProductId);
+  SET @new_quantity := (@actual_quantity - pQuantity);
+  IF (@new_quantity <= 0) THEN
+		UPDATE BusinessStock
+		SET quantity = 0 WHERE product_id = pProductId;
+	ELSE
+		UPDATE BusinessStock
+		SET quantity = @new_quantity WHERE product_id = pProductId;
+	END IF;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Use correcaminosdb;
+DROP TABLE IF EXISTS ClientOrderDetail; 
+CREATE TABLE ClientOrderDetail (
+	client_order_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  CONSTRAINT PK_ClientOrdDet
+		PRIMARY KEY (client_order_id, product_id),
+	CONSTRAINT FK_ClientOrdDet_ordId
+		FOREIGN KEY (client_order_id)
+    REFERENCES ClientOrder (client_order_id)
+    ON DELETE CASCADE,
+	CONSTRAINT FK_ClientOrdDet_prodId
+		FOREIGN KEY (product_id)
+    REFERENCES Product (product_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_cltOrdDet$$
+CREATE PROCEDURE getp_cltOrdDet(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM ClientOrderDetail ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_cltOrdDetOf$$
+CREATE PROCEDURE getp_cltOrdDetOf(IN pClientOrderId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT cod.product_id, p.product_name, cod.quantity ',
+												 'FROM ClientOrderDetail cod ',
+                         'LEFT JOIN Product p ON p.product_id = cod.product_id ',
+												 'WHERE client_order_id = ', pClientOrderId, ' ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP FUNCTION IF EXISTS get_prod_readiness$$
+CREATE FUNCTION get_prod_readiness(pProductId INT, pQuantity INT)
+	RETURNS VARCHAR(50) DETERMINISTIC
+BEGIN
+	SET @actual_quantity := get_product_quantity(pProductId);
+  IF (@actual_quantity is NULL OR (@actual_quantity - pQuantity < 0)) THEN
+		RETURN 'Not Ready';
+	ELSE
+		RETURN 'Ready';
+  END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS create_cltOrdDet$$
+CREATE PROCEDURE create_cltOrdDet (IN pClientOrderId INT, IN pProductId INT, IN pQuantity INT)
+BEGIN
+	SET @readiness = get_prod_readiness(pProductId, pQuantity);
+  IF (@readiness = 'Not Ready') THEN
+    INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+    VALUES (pClientOrderId, pProductId, pQuantity);
+    CALL upd_clientOrder(pClientOrderId, 'pendiente');
+	ELSE
+		INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+    VALUES (pClientOrderId, pProductId, pQuantity);
+  END IF;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
 -- DELETE FROM DeliveryDay;
 CALL create_dev_day('Monday');
 CALL create_dev_day('Tuesday');
@@ -1238,13 +1690,53 @@ CALL create_route('ROUTE_I', 3.3);
 CALL create_route('ROUTE_J', 2.6);
 
 DELETE FROM ProductCategory;
-CALL create_prodCat('Article');
-CALL create_prodCat('Service');
-CALL create_prodSubCat('Refresco', 3);
-CALL create_prodSubCat('Comestible', 3);
-CALL create_prodSubCat('Limpieza', 3);
+DELETE FROM ProductSubcategory;
+SELECT * FROM ProductSubCategory;
 SELECT * FROM ProductCategory;
+CALL create_prodCat('Granos básicos'); -- 1
+CALL create_prodSubCat('Arroz', 5);
+CALL create_prodSubCat('Frijoles', 5);
+CALL create_prodSubCat('Trigo', 5);
+CALL create_prodCat('Lacteos'); -- 2
+CALL create_prodSubCat('Leche', 6);
+CALL create_prodSubCat('Yogurt', 6);
+CALL create_prodCat('Refresco'); -- 3
+CALL create_prodSubCat('Gaseosa', 7);
+CALL create_prodSubCat('Cerveza', 7);
+CALL create_prodSubCat('Jugo', 7);
 
+SELECT * FROM Product;
+DELETE FROM Product;
+SELECT * FROM ProductSubCategory;
+-- 2 Arroz, 4 Frijoles, 5 Trigo, 6 Leche, 7 Yogurt, 8 Gaseosa, 9 Cerveza, 10 Jugo
+CALL create_product('Arroz Integral 1kg', 2, 'YES');
+CALL create_product('Arroz Precocido 1kg', 2, 'YES');
+CALL create_product('Frijoles Rojos 800g', 4, 'YES');
+CALL create_product('Frijoles Negros 500g', 4, 'YES');
+CALL create_product('Harina Integral 300g', 5, 'YES');
+CALL create_product('Harina Reposteria 300g', 5, 'YES');
+CALL create_product('Leche Entera 1L', 6, 'YES');
+CALL create_product('Leche Deslactosada 1L', 6, 'YES');
+CALL create_product('Yogurt Arandano 250ml', 7, 'YES');
+CALL create_product('Yogurt Fresa 250ml', 7, 'YES');
+CALL create_product('Coca Cola 355ml', 8, 'YES');
+CALL create_product('Fresca 600ml', 8, 'YES');
+SELECT * FROM Product;
+
+CALL reg_product_bussStock(4, 100);
+CALL reg_product_bussStock(5, 5000);
+CALL reg_product_bussStock(6, 50);
+CALL reg_product_bussStock(7, 200);
+CALL reg_product_bussStock(8, 670);
+CALL reg_product_bussStock(9, 900);
+CALL reg_product_bussStock(10, 2000);
+CALL reg_product_bussStock(11, 20);
+CALL reg_product_bussStock(12, 7000);
+CALL reg_product_bussStock(13, 500);
+CALL reg_product_bussStock(14, 900);
+CALL reg_product_bussStock(15, 4000);
+DELETE FROM BusinessStock;
+SELECT * FROM BusinessStock;
 
 SELECT * FROM ZoneXRoute;
 DELETE FROM ZoneXRoute;
@@ -1255,4 +1747,4 @@ INSERT INTO ZoneXRoute (zone_id, route_id)
 VALUES (1, 2), (1, 3), (1, 5), (2, 4), (2, 6);
 
 SHOW PROCEDURE STATUS;
-SHOW TABLES;
+SHOW TABLES;*/
