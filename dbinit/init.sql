@@ -9,7 +9,6 @@ CREATE DATABASE IF NOT EXISTS correcaminosdb;
 USE correcaminosdb;
 SET GLOBAL sql_mode='';
 SET GLOBAL event_scheduler = ON;
-SHOW TABLES;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- XXVEHICLE
 /*
@@ -1473,7 +1472,26 @@ END $$
 
 /*
 PROCEDURE: getp_clients
+DESCRIPTION: Get all the clients with pagination parameters.
 */
+CREATE PROCEDURE getp_clients(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT c.client_id, c.business_name, c.business_representative, ',
+												 'c.phone_number, c.email, c.formal_address, ',
+                         'bt.business_type_id, bt.business_type_name, ',
+                         'di.dev_interval_id, di.dev_interval_name, ',
+                         'z.zone_id, z.zone_name, c.formal_address, ga.latitude, ga.longitude ',
+                         'FROM Client c ',
+                         'INNER JOIN Zone z ON c.zone_id = z.zone_id ',
+                         'INNER JOIN DeliveryInterval di ON c.dev_interval_id = di.dev_interval_id ',
+                         'INNER JOIN BusinessType bt ON c.business_type_id = bt.business_type_id ',
+                         'INNER JOIN GeologicalAddress ga ON c.geo_address_id = ga.geo_address_id ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
 
 /*
 PROCEDURE isValueInTable
@@ -1855,6 +1873,17 @@ BEGIN
   SET order_status = pStatus
   WHERE client_order_id = pClientOrderId;
 END $$
+
+/*
+FUNCTION get_ordStatus
+DESCRIPTION: Returns the status of a client order.
+*/
+CREATE FUNCTION get_ordStatus(pClientOrderId INT)
+	RETURNS VARCHAR(255) DETERMINISTIC
+BEGIN
+	SET @stat := (SELECT order_status FROM ClientOrder WHERE client_order_id = pClientOrderId);
+  RETURN @stat;
+END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1901,10 +1930,9 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP FUNCTION IF EXISTS get_prod_readiness$$
+/*
+*/
 CREATE FUNCTION get_prod_readiness(pProductId INT, pQuantity INT)
 	RETURNS VARCHAR(50) DETERMINISTIC
 BEGIN
@@ -1915,10 +1943,7 @@ BEGIN
 		RETURN 'Ready';
   END IF;
 END $$
-DELIMITER ;
 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_cltOrdDet$$
 CREATE PROCEDURE create_cltOrdDet (IN pClientOrderId INT, IN pProductId INT, IN pQuantity INT)
 BEGIN
 	SET @readiness = get_prod_readiness(pProductId, pQuantity);
@@ -1931,94 +1956,37 @@ BEGIN
     VALUES (pClientOrderId, pProductId, pQuantity);
   END IF;
 END $$
+
+/*
+FUNCTION dispatchOrder
+DESCRIPTION: This would remove all the items from the businessStock of a 'ready/en despacho' order.
+*/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS dispatchOrder$$
+CREATE PROCEDURE dispatchOrder(IN pClientOrderId INT)
+BEGIN
+	DECLARE var_product_id INTEGER;
+  DECLARE var_quantity INTEGER; 
+  DECLARE var_final INTEGER DEFAULT 0;
+  DECLARE cursor1 CURSOR FOR SELECT product_id, quantity FROM ClientOrderDetail WHERE client_order_id = pClientOrderId;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET var_final = 1;
+	SET @ordStatus = get_ordStatus(pClientOrderId);
+  IF (@ordStatus = 'en despacho') THEN
+		OPEN cursor1;
+    bucle: LOOP
+			FETCH cursor1 INTO var_product_id, var_quantity;
+      IF var_final = 1 THEN
+				LEAVE bucle;
+			END IF;
+      CALL unreg_product_bussStock(var_product_id, var_quantity);
+		END LOOP bucle;
+    CLOSE cursor1;
+	ELSE
+		SIGNAL SQLSTATE '23000'
+    SET MESSAGE_TEXT = 'Order isnot ready for dispatch', MYSQL_ERRNO = 1000;
+  END IF;
+END $$
 DELIMITER ;
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/*
--- DELETE FROM DeliveryDay;
-CALL create_dev_day('Monday');
-CALL create_dev_day('Tuesday');
-CALL create_dev_day('Wednesday');
-CALL create_dev_day('Thursday');
-CALL create_dev_day('Friday');
-CALL create_dev_day('Saturday');
-CALL create_dev_day('Sunday');
-
-CALL create_zone('CENTER');
-CALL create_zone('ATLANTIC');
-CALL create_zone('EAST');
-CALL create_zone('WEST');
-
-CALL create_route('ROUTE_A', 2.4);
-CALL create_route('ROUTE_B', 1.6);
-CALL create_route('ROUTE_C', 2.2);
-CALL create_route('ROUTE_D', 6.5);
-CALL create_route('ROUTE_E', 1.7);
-CALL create_route('ROUTE_F', 0.2);
-CALL create_route('ROUTE_G', 1.3);
-CALL create_route('ROUTE_H', 4.2);
-CALL create_route('ROUTE_I', 3.3);
-CALL create_route('ROUTE_J', 2.6);
-
-DELETE FROM ProductCategory;
-DELETE FROM ProductSubcategory;
-SELECT * FROM ProductSubCategory;
-SELECT * FROM ProductCategory;
-CALL create_prodCat('Granos básicos'); -- 1
-CALL create_prodSubCat('Arroz', 5);
-CALL create_prodSubCat('Frijoles', 5);
-CALL create_prodSubCat('Trigo', 5);
-CALL create_prodCat('Lacteos'); -- 2
-CALL create_prodSubCat('Leche', 6);
-CALL create_prodSubCat('Yogurt', 6);
-CALL create_prodCat('Refresco'); -- 3
-CALL create_prodSubCat('Gaseosa', 7);
-CALL create_prodSubCat('Cerveza', 7);
-CALL create_prodSubCat('Jugo', 7);
-
-SELECT * FROM Product;
-DELETE FROM Product;
-SELECT * FROM ProductSubCategory;
--- 2 Arroz, 4 Frijoles, 5 Trigo, 6 Leche, 7 Yogurt, 8 Gaseosa, 9 Cerveza, 10 Jugo
-CALL create_product('Arroz Integral 1kg', 2, 'YES');
-CALL create_product('Arroz Precocido 1kg', 2, 'YES');
-CALL create_product('Frijoles Rojos 800g', 4, 'YES');
-CALL create_product('Frijoles Negros 500g', 4, 'YES');
-CALL create_product('Harina Integral 300g', 5, 'YES');
-CALL create_product('Harina Reposteria 300g', 5, 'YES');
-CALL create_product('Leche Entera 1L', 6, 'YES');
-CALL create_product('Leche Deslactosada 1L', 6, 'YES');
-CALL create_product('Yogurt Arandano 250ml', 7, 'YES');
-CALL create_product('Yogurt Fresa 250ml', 7, 'YES');
-CALL create_product('Coca Cola 355ml', 8, 'YES');
-CALL create_product('Fresca 600ml', 8, 'YES');
-SELECT * FROM Product;
-
-CALL reg_product_bussStock(4, 100);
-CALL reg_product_bussStock(5, 5000);
-CALL reg_product_bussStock(6, 50);
-CALL reg_product_bussStock(7, 200);
-CALL reg_product_bussStock(8, 670);
-CALL reg_product_bussStock(9, 900);
-CALL reg_product_bussStock(10, 2000);
-CALL reg_product_bussStock(11, 20);
-CALL reg_product_bussStock(12, 7000);
-CALL reg_product_bussStock(13, 500);
-CALL reg_product_bussStock(14, 900);
-CALL reg_product_bussStock(15, 4000);
-DELETE FROM BusinessStock;
-SELECT * FROM BusinessStock;
-
-SELECT * FROM ZoneXRoute;
-DELETE FROM ZoneXRoute;
-CALL create_zonexroute(2, 4);
-CALL create_zonexroute(2, 3);
-
-INSERT INTO ZoneXRoute (zone_id, route_id)
-VALUES (1, 2), (1, 3), (1, 5), (2, 4), (2, 6);
-
-SHOW PROCEDURE STATUS;
-SHOW TABLES;*/
