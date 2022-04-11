@@ -1887,6 +1887,10 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE ClientOrderDetail
+DESCRIPTION: Keep all the order details.
+*/
 CREATE TABLE ClientOrderDetail (
 	client_order_id INT NOT NULL,
   product_id INT NOT NULL,
@@ -1903,8 +1907,11 @@ CREATE TABLE ClientOrderDetail (
     ON DELETE CASCADE
 );
 
+/*
+PROCEDURE getp_cltOrdDet
+DESCRIPTION: Returns all the client order details with pagination.
+*/
 DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_cltOrdDet$$
 CREATE PROCEDURE getp_cltOrdDet(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1916,8 +1923,11 @@ BEGIN
 END $$
 DELIMITER ;
 
+/*
+PROCEDURE getp_cltOrdDetOf
+DESCRIPTION: Give all the details of the order of a client with pagination.
+*/
 DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_cltOrdDetOf$$
 CREATE PROCEDURE getp_cltOrdDetOf(IN pClientOrderId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1961,8 +1971,6 @@ END $$
 FUNCTION dispatchOrder
 DESCRIPTION: This would remove all the items from the businessStock of a 'ready/en despacho' order.
 */
-DELIMITER $$
-DROP PROCEDURE IF EXISTS dispatchOrder$$
 CREATE PROCEDURE dispatchOrder(IN pClientOrderId INT)
 BEGIN
 	DECLARE var_product_id INTEGER;
