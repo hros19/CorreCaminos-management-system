@@ -1147,6 +1147,17 @@ CREATE TABLE BusinessStock(
 
 DELIMITER $$
 /*
+FUNCTION get_product_status
+DESCRIPTION: Returns the actual status of a product.
+*/
+CREATE FUNCTION get_product_status(pProductId INT)
+	RETURNS VARCHAR(25) DETERMINISTIC
+BEGIN
+	SET @status := (SELECT is_available FROM Product WHERE product_id = pProductId);
+  RETURN @status;
+END$$
+
+/*
 PROCEDURE getp_businessStock
 DESCRIPTION: Get all the products in the business stock with pagination parameters.
 */
@@ -1247,7 +1258,131 @@ CALL reg_prod_bussStock(11, 1750);
 CALL reg_prod_bussStock(12, 2800); 
 CALL reg_prod_bussStock(13, 5000); 
 CALL reg_prod_bussStock(14, 15000); 
-CALL reg_prod_bussStock(15, 200);     
+CALL reg_prod_bussStock(15, 200); 
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: SupplierOrder
+DESCRIPTION: This table is to register all the orders the company made to each
+supplier, also having control of the last order.
+*/
+CREATE TABLE SupplierOrder (
+	supplier_order_id INT NOT NULL AUTO_INCREMENT,
+	supplier_id INT NOT NULL,
+  order_date DATE DEFAULT (CURRENT_DATE),
+  CONSTRAINT PK_SupOrder
+		PRIMARY KEY (supplier_order_id),
+	CONSTRAINT FK_SupOrder_SupId
+		FOREIGN KEY (supplier_id)
+    REFERENCES Supplier (supplier_id)
+    ON DELETE CASCADE,
+	CONSTRAINT UQ_SupOrder
+		UNIQUE (supplier_id, order_date)
+);
+
+DELIMITER $$
+/*
+FUNCTION: getq_ordersBySup
+DESCRIPTION: Get the quantity of the total orders by a specific supplier.
+*/
+DROP FUNCTION IF EXISTS getq_ordersBySup$$
+CREATE FUNCTION getq_ordersBySup(pSupplierId INT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @qty := (SELECT COUNT(*) FROM SupplierOrder WHERE supplier_id = pSupplierId);
+  RETURN @qty;
+END$$
+
+/*
+FUNCTION: getd_lastOrderSup
+DESCRIPTION: Returns the date of the last order by an specific Supplier.
+*/
+DROP FUNCTION IF EXISTS getd_lastOrderSup$$
+CREATE FUNCTION getd_lastOrderSup(pSupplierId INT)
+	RETURNS DATE DETERMINISTIC
+BEGIN
+	DECLARE last_order DATE;
+  SET last_order = (SELECT order_date FROM SupplierOrder
+										WHERE supplier_id = pSupplierId
+										ORDER BY order_date DESC LIMIT 0, 1);
+	return last_order;
+END$$
+
+/*
+PROCEDURE: create_supOrder
+DESCRIPTION: Register a new order for a Supplier and also returns the id of the
+SupplierOrder just created.
+*/
+CREATE PROCEDURE create_supOrder(IN pSupplierId INT)
+BEGIN
+	SET @qty_orders = getq_ordersBySup(pSupplierId);
+  IF (@qty_orders = 0) THEN
+		INSERT INTO SupplierOrder (supplier_id)
+    VALUES (pSupplierId);
+    SET @ID = LAST_INSERT_ID();
+    SELECT @ID;
+	ELSE
+		SET @last_order := getd_lastOrderSup(pSupplierId);
+    IF (DATEDIFF(CURRENT_DATE, @last_order) <= 7) THEN
+			SIGNAL SQLSTATE '23000'
+      SET MESSAGE_TEXT = 'No more than 1 order by week for each supplier',
+      MYSQL_ERRNO = 1000;
+		ELSE
+			INSERT INTO SupplierOrder (supplier_id)
+      VALUES (pSupplierId);
+      SET @ID = LAST_INSERT_ID();
+      SELECT @ID;
+    END IF;
+  END IF;
+END $$
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: SupplierOrdDet
+DESCRIPTION: Would manage the details for each order for the suppliers.
+*/
+CREATE TABLE SupplierOrdDet (
+	supplier_order_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  CONSTRAINT PK_SupOrdDet
+		PRIMARY KEY (supplier_order_id, product_id),
+	CONSTRAINT FK_SupOrdDet_supId
+		FOREIGN KEY (supplier_order_id)
+		REFERENCES SupplierOrder (supplier_order_id)
+    ON DELETE CASCADE,
+	CONSTRAINT FK_SupOrdDet_prodId
+		FOREIGN KEY (product_id)
+    REFERENCES Product (product_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+/*
+PROCEDURE: create_supOrdDet
+DESCRIPTION: Creates a new supplier order detail.
+*/
+DROP PROCEDURE IF EXISTS create_supOrdDet$$
+CREATE PROCEDURE create_supOrdDet(IN pSupplierOrderId INT, IN pProductId INT, IN pQuantity INT)
+BEGIN
+	INSERT INTO SupplierOrdDet (supplier_order_id, product_id, quantity)
+  VALUES (pSupplierOrderId, pProductId, pQuantity);
+  -- Do the changes on Business Stock.
+  SET @prod_qty := get_product_quantity(pProductId);
+  SET @prod_status := get_product_status(pProductId);
+  IF (@prod_status = 'NO') THEN
+		SIGNAL SQLSTATE '23002'
+    SET MESSAGE_TEXT = 'Product not available', MYSQL_ERRNO = 1002;
+  ELSEIF (@prod_qty is NULL) THEN
+		-- The product is not registered on the business stock, then created it.
+    CALL reg_prod_bussStock(pProductId, pQuantity);
+	ELSE
+		-- Product already on stock, just need refill.
+    CALL fill_product_bussStock(pProductId, pQuantity);
+  END IF;
+END $$
+DELIMITER ;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 /*
@@ -1336,7 +1471,9 @@ BEGIN
 	END IF;
 END $$
 
--- TODO: getp_clients.
+/*
+PROCEDURE: getp_clients
+*/
 
 /*
 PROCEDURE isValueInTable
@@ -1355,6 +1492,26 @@ BEGIN
   SET result = @RES;
 END $$
 DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SELECT * FROM Zone;
+SELECT * FROM DeliveryInterval;
+SELECT * FROM BusinessType;
+-- Zones: Norte, Central, Sur
+-- DI: DAILY, WEEKLY, TWO_PER_WEEK, BIWEEKLY
+-- BT: Chino, Supermercado, Gasolinera, Automercado, Restaurante.
+CALL create_client(1, 2, 3, 'Gasolinera A', 'Joaquin Mesa', '85856969', 'joq@mail.com',
+									 'Frente a masxmenos Av 15', 20.6, 67.5);
+CALL create_client(1, 4, 1, 'Chino A', 'Oscar Arias', '83830294', 'oscarin@mail.com',
+									 'Diagonal a la corte', -50.4, 11.56);
+CALL create_client(2, 4, 5, 'Restaurante A', 'Dolores Brenes', '82828282', 'dolor@mail.com',
+									 'A la par del estadio nacional', 56.24, 5.3);
+CALL create_client(2, 1, 5, 'Restaurante B', 'Adriana Rodriguez', '89707070', 'adri@mail.com',
+									 'Continuo a la musmanni', 86.65, 24.7);
+CALL create_client(3, 2, 4, 'Automercado A', 'Martin Caceres', '82009881', 'martin@mail.com',
+									 'Frente al teatrio de bellas artes', -11.64, 10.46);
+CALL create_client(3, 3, 2, 'Supermercado A', 'Alan Mena', '82129456', 'alan@mail.com',
+									 'Diagonal a mogambos', 44.56, -27.2); 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
@@ -1424,6 +1581,13 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_clientxdevday(1, 3); -- Delivery on Wednesdays.
+CALL create_clientxdevday(2, 1); -- Delivery on Mondays.
+CALL create_clientxdevday(3, 6); -- Delivery on Saturdays.
+CALL create_clientxdevday(5, 5); -- Delivery on Fridays.
+CALL create_clientxdevday(6, 3); -- Delivery on Wednesdays.
+CALL create_clientxdevday(6, 7); -- and Sundays.
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 Table: ClientOrder
@@ -1694,8 +1858,6 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Use correcaminosdb;
-DROP TABLE IF EXISTS ClientOrderDetail; 
 CREATE TABLE ClientOrderDetail (
 	client_order_id INT NOT NULL,
   product_id INT NOT NULL,
