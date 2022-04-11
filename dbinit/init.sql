@@ -816,6 +816,10 @@ CALL create_zonexroute(3, 8);
 CALL create_zonexroute(3, 9);
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: Supplier
+DESCRIPTION: All the supplier that give products to the CorreCaminos company.
+*/
 CREATE TABLE Supplier (
 	supplier_id INT NOT NULL AUTO_INCREMENT,
   supplier_name VARCHAR(255) NOT NULL,
@@ -862,7 +866,390 @@ BEGIN
 	WHERE supplier_id = pSupplierId;
 END $$
 
+/*
+PROCEDURE: getp_suppliers
+DESCRIPTION: Get all the supplier with pagination parameters.
+*/
+CREATE PROCEDURE getp_suppliers(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), 
+																IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM Supplier ',
+												 'ORDER BY ', pParameter, ' ' ,pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+DELIMITER ;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: ProductCategory
+DESCRIPTION: This table would keep all the product categories.
+*/
+CREATE TABLE ProductCategory (
+	product_cat_id INT NOT NULL AUTO_INCREMENT,
+  product_cat_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_ProdCat_id
+		PRIMARY KEY (product_cat_id),
+	CONSTRAINT UQ_ProdCat_name
+		UNIQUE (product_cat_name)
+);
+
+DELIMITER $$
+/*
+PROCEDURE: create_prodCat
+DESCRIPTION: Creates a new product category
+*/
+CREATE PROCEDURE create_prodCat(IN pProdCatName VARCHAR(255))
+BEGIN
+	INSERT INTO ProductCategory (product_cat_name) 
+  VALUES (pProdCatName);
+  SET @PRODUCT_CAT_ID = LAST_INSERT_ID();
+  SELECT * FROM ProductCategory WHERE product_cat_id = @PRODUCT_CAT_ID;
+END $$
+
+/*
+PROCEDURE: getp_prodCategories
+DESCRIPTION: Return all the product categories with pagination parameters.
+*/
+CREATE PROCEDURE getp_prodCategories(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM ProductCategory ',
+												 'ORDER BY product_cat_name ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: upd_prodCategory
+DESCRIPTION: Update an existing product category from the table.
+*/
+CREATE PROCEDURE upd_prodCategory(IN pProdCatId INT, IN pProdCatName VARCHAR(255))
+BEGIN
+	UPDATE ProductCategory
+	SET product_cat_name = pProdCatName
+	WHERE product_cat_id = pProdCatId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: ProductSubCategory
+DESCRIPTION: Table to keep the subcategories of each product.
+*/
+CREATE TABLE ProductSubCategory (
+	product_subcat_id INT NOT NULL AUTO_INCREMENT,
+  product_subcat_catId INT NOT NULL, 
+  product_subcat_name VARCHAR(255) NOT NULL,
+  CONSTRAINT PK_ProdSubCat_id
+		PRIMARY KEY (product_subcat_id),
+	CONSTRAINT UQ_ProdSubCat_name
+		UNIQUE (product_subcat_name),
+	CONSTRAINT FK_ProdSubCat_CatId
+		FOREIGN KEY (product_subcat_catId)
+    REFERENCES ProductCategory (product_cat_id)
+    ON DELETE CASCADE
+);
+
+DELIMITER $$
+/*
+PROCEDURE: create_prodSubCat
+DESCRIPTION: create a new product subcategory, asociated to an product category
+*/
+CREATE PROCEDURE create_prodSubCat(IN pProdSubCatName VARCHAR(255), IN pCatId INT)
+BEGIN
+	INSERT INTO ProductSubCategory (product_subcat_name, product_subcat_catId) 
+  VALUES (pProdSubCatName, pCatId);
+  SET @PRODUCT_SUBCAT_ID = LAST_INSERT_ID();
+  SELECT * FROM ProductSubCategory WHERE product_subcat_id = @PRODUCT_SUBCAT_ID;
+END $$
+
+/*
+PROCEDURE: getp_prodSubCategories
+DESCRIPTION: Get all the product sub categories with pagination parameters.
+*/
+CREATE PROCEDURE getp_prodSubCategories(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255),
+																				IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT pc.product_cat_id AS "Category_id", pc.product_cat_name AS "Category_name",',
+												 'psc.product_subcat_id AS "SubCategory_id", psc.product_subcat_name AS "SubCategory_name" ',
+												 'FROM ProductSubCategory psc ',
+                         'RIGHT JOIN ProductCategory pc ON psc.product_subcat_catId = pc.product_cat_id ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+FUNCTION: get_subcat_cat
+DESCRIPTION: Return the id of the category of an specific subcategory.
+*/
+CREATE FUNCTION get_subcat_cat(pProdSubCatId INT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @v := (SELECT pc.product_cat_id FROM ProductSubCategory psc
+						 INNER JOIN ProductCategory pc ON psc.product_subcat_catId = pc.product_cat_id
+						 WHERE product_subcat_id = pProdSubCatId);
+	RETURN @v;
+END $$
+
+/*
+PROCEDURE: upd_prodSubCategory
+DESCRIPTION: Update an existing product subcategory.
+*/
+CREATE PROCEDURE upd_prodSubCategory(IN pProdSubCatId INT, IN pProdSubCatName VARCHAR(255))
+BEGIN
+	UPDATE ProductSubCategory
+	SET product_subcat_name = pProdSubCatName
+	WHERE product_subcat_id = pProdSubCatId;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Initial info for Supplier, ProductCategory and ProductSubCategory
+CALL create_supplier('Dos Pinos', 'Avenida central contiguo al estadio', '27030606', 'dospinos@cr.com', 'YES');
+CALL create_supplier('Coca Cola FEMSA', 'Frente al teatro Nacional de San José', '27806924', 'cocacola@cr.com', 'YES');
+CALL create_supplier('Pepsico', 'A la par de mogambos', '27455501', 'pepsico@cr.com', 'NO');
+
+CALL create_prodCat('Granos básicos'); -- 1
+CALL create_prodSubCat('Arroz', 1);
+CALL create_prodSubCat('Frijoles', 1);
+CALL create_prodSubCat('Trigo', 1);
+CALL create_prodCat('Lacteos'); -- 2
+CALL create_prodSubCat('Leche', 2);
+CALL create_prodSubCat('Yogurt', 2);
+CALL create_prodCat('Refresco'); -- 3
+CALL create_prodSubCat('Gaseosa', 3);
+CALL create_prodSubCat('Cerveza', 3);
+CALL create_prodSubCat('Jugo', 3);
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE: Product
+DESCRIPTION: All the products registered.
+*/
+CREATE TABLE Product (
+	product_id INT NOT NULL AUTO_INCREMENT,
+  supplier_id INT NOT NULL,
+  product_name VARCHAR(255) NOT NULL,
+  product_cat_id INT NOT NULL,
+  product_subcat_id INT NOT NULL,
+  is_available VARCHAR(20) NOT NULL DEFAULT 'YES',
+  CONSTRAINT PK_Product
+		PRIMARY KEY (product_id),
+	CONSTRAINT FK_Product_SupId
+		FOREIGN KEY (supplier_id)
+    REFERENCES Supplier (supplier_id)
+    ON DELETE CASCADE,
+	CONSTRAINT FK_Product_catId
+		FOREIGN KEY (product_cat_id)
+    REFERENCES ProductCategory (product_cat_id)
+    ON DELETE RESTRICT,
+	CONSTRAINT FK_Product_subcatId
+		FOREIGN KEY (product_subcat_id)
+    REFERENCES ProductSubCategory (product_subcat_id)
+    ON DELETE RESTRICT,
+	CONSTRAINT UQ_Product_name
+		UNIQUE (product_name)
+);
+
+DELIMITER $$
+/*
+PROCEDURE create_product
+DESCRIPTION: Creates a new product on the database.
+*/
+CREATE PROCEDURE create_product(IN pProdName VARCHAR(255), IN pSupplierId INT, IN pSubCatId INT,
+																IN pIsAvailable VARCHAR(10))
+BEGIN
+	SET @category_id := get_subcat_cat(pSubCatId);
+  IF (@category_id IS NULL)
+		THEN SELECT 'No subcategory with that id' AS 'Error';
+	ELSE
+		INSERT INTO Product (product_name, supplier_id, product_cat_id, product_subcat_id, is_available)
+		VALUES (pProdName, pSupplierId, @category_id, pSubCatId, pIsAvailable);
+		SET @PRODUCT_ID = LAST_INSERT_ID();
+		SELECT * FROM Product WHERE product_id = @PRODUCT_ID;
+  END IF;
+END $$
+
+/*
+PROCEDURE: getp_pruducts
+DESCRIPTION: Return all the products with pagination parameters.
+*/
+CREATE PROCEDURE getp_products(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM Product ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: upd_product
+DESCRIPTION: Update an existing product
+*/
+CREATE PROCEDURE upd_product(IN pProductId INT, IN pProductName VARCHAR(255), IN pSubCatId INT, IN pIsAvailable VARCHAR(255))
+BEGIN
+	SET @category_id := get_subcat_cat(pSubCatId);
+  IF (@category_id IS NULL)
+		THEN SELECT 'No subcategory with that id' AS 'Error';
+	ELSE
+		UPDATE Product
+    SET product_name = pProductName, product_cat_id = @category_id, product_subcat_id = pSubCatId,
+				is_available = pIsAvailable
+		WHERE product_id = pProductId;
+  END IF;
+END $$
+
+/*
+PROCEDURE getp_sup_products
+DESCRIPTION: Get all the products of a supplier.
+*/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS getp_sup_products$$
+CREATE PROCEDURE getp_sup_products(IN pSupplierId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT prod.product_id, prod.product_name, psc.product_subcat_id, ', 
+												 'psc.product_subcat_name, sup.supplier_id, sup.supplier_name, prod.is_available ',
+												 'FROM Product prod ',
+												 'INNER JOIN Supplier sup ON sup.supplier_id = prod.supplier_id ',
+                         'INNER JOIN ProductSubCategory psc ON psc.product_subcat_id = prod.product_subcat_id ',
+                         'WHERE prod.supplier_id = ', pSupplierId, ' ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;	
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+TABLE BusinessStock
+DESCRIPTION: Keeps all the products that are available on the company stock.
+*/
+CREATE TABLE BusinessStock(
+	product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  CONSTRAINT PK_BussStock
+		PRIMARY KEY (product_id),
+	CONSTRAINT FK_BussStock_prodId
+		FOREIGN KEY (product_id)
+    REFERENCES Product (product_id)
+    ON DELETE RESTRICT
+);
+
+DELIMITER $$
+/*
+PROCEDURE getp_businessStock
+DESCRIPTION: Get all the products in the business stock with pagination parameters.
+*/
+CREATE PROCEDURE getp_businessStock(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM BusinessStock ',
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE reg_product_bussStock
+DESCRIPTION: Register new products in the businessStock.
+*/
+CREATE PROCEDURE reg_prod_bussStock(IN pProductId INT, IN pQuantity INT)
+BEGIN
+	INSERT INTO BusinessStock (product_id, quantity)
+  VALUES (pProductId, pQuantity);
+  SELECT p.product_id, p.product_name, bs.quantity FROM BusinessStock bs
+  INNER JOIN Product p ON p.product_id = bs.product_id
+  WHERE bs.product_id = pProductId;
+END $$
+
+/*
+FUNCTION get_product_quantity
+DESCRIPTION: Return the actual quantity of specific product.
+*/
+CREATE FUNCTION get_product_quantity(pProductId INT)
+	RETURNS INT DETERMINISTIC
+BEGIN
+	SET @v := (SELECT quantity FROM BusinessStock WHERE product_id = pProductId);
+  return @v;
+END $$
+
+/*
+PROCEDURE fill_product_bussStock
+DESCRIPTION: Fill the stock of an existing product in the business stock.
+*/
+CREATE PROCEDURE fill_product_bussStock(IN pProductId INT, IN pQuantity INT)
+BEGIN
+	SET @actual_quantity := get_product_quantity(pProductId);
+  SET @new_quantity := (@actual_quantity + pQuantity);
+  UPDATE BusinessStock
+  SET quantity = @new_quantity WHERE product_id = pProductId;
+END $$
+
+/*
+PROCEDURE unreg_product_bussStock
+DESCRIPTION: Unregister a specific amount of a product in the business stock. 
+This can also be readin as a 'extrack product from bussiness stock'.
+*/
+CREATE PROCEDURE unreg_product_bussStock(IN pProductId INT, IN pQuantity INT)
+BEGIN
+	SET @actual_quantity := get_product_quantity(pProductId);
+  SET @new_quantity := (@actual_quantity - pQuantity);
+  IF (@new_quantity <= 0) THEN
+		UPDATE BusinessStock
+		SET quantity = 0 WHERE product_id = pProductId;
+	ELSE
+		UPDATE BusinessStock
+		SET quantity = @new_quantity WHERE product_id = pProductId;
+	END IF;
+END $$
+DELIMITER ;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Init values for BusinessStock and Product
+CALL create_product('Leche Entera 1L', 1, 4, 'NO');
+CALL create_product('Leche Deslactosada 1L', 1, 4, 'YES');
+CALL create_product('Yogurt Arandano 250ml', 1, 5, 'YES');
+CALL create_product('Yogurt Fresa 250ml', 1, 5, 'YES');
+CALL create_product('Pilsen TR 250ml', 1, 7, 'YES');
+CALL create_product('Heineken LT 333ml', 1, 7, 'YES');
+CALL create_product('Imperial', 1, 7, 'NO');
+CALL create_product('Coca Cola 355ml', 2, 6, 'YES');
+CALL create_product('Fresca 600ml', 2, 6, 'YES');
+CALL create_product('Arroz Integral 1kg', 3, 1, 'NO');
+CALL create_product('Arroz Precocido 1kg', 3, 1, 'YES');
+CALL create_product('Frijoles Rojos 800g', 3, 2, 'YES');
+CALL create_product('Frijoles Negros 500g', 3, 2, 'YES');
+CALL create_product('Harina Integral 300g', 3, 3, 'YES');
+CALL create_product('Harina Reposteria 300g', 3, 3, 'YES');
+
+CALL reg_prod_bussStock(1, 10000);
+CALL reg_prod_bussStock(2, 500);
+CALL reg_prod_bussStock(3, 8000);
+CALL reg_prod_bussStock(4, 450);
+CALL reg_prod_bussStock(5, 550); 
+CALL reg_prod_bussStock(6, 900); 
+CALL reg_prod_bussStock(7, 1200); 
+CALL reg_prod_bussStock(8, 1650); 
+CALL reg_prod_bussStock(9, 2000); 
+CALL reg_prod_bussStock(10, 900); 
+CALL reg_prod_bussStock(11, 1750); 
+CALL reg_prod_bussStock(12, 2800); 
+CALL reg_prod_bussStock(13, 5000); 
+CALL reg_prod_bussStock(14, 15000); 
+CALL reg_prod_bussStock(15, 200);     
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 /*
 TABLE: Client
 DESCRIPTION: Table for all the clients of the company.
@@ -1303,281 +1690,6 @@ BEGIN
 	UPDATE ClientOrder
   SET order_status = pStatus
   WHERE client_order_id = pClientOrderId;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/*
-TABLE: ProductCategory
-DESCRIPTION: This table would keep all the product categories.
-*/
-CREATE TABLE ProductCategory (
-	product_cat_id INT NOT NULL AUTO_INCREMENT,
-  product_cat_name VARCHAR(255) NOT NULL,
-  CONSTRAINT PK_ProdCat_id
-		PRIMARY KEY (product_cat_id),
-	CONSTRAINT UQ_ProdCat_name
-		UNIQUE (product_cat_name)
-);
-
-DELIMITER $$
-/*
-PROCEDURE: create_prodCat
-DESCRIPTION: Creates a new product category
-*/
-CREATE PROCEDURE create_prodCat(IN pProdCatName VARCHAR(255))
-BEGIN
-	INSERT INTO ProductCategory (product_cat_name) 
-  VALUES (pProdCatName);
-  SET @PRODUCT_CAT_ID = LAST_INSERT_ID();
-  SELECT * FROM ProductCategory WHERE product_cat_id = @PRODUCT_CAT_ID;
-END $$
-
-/*
-PROCEDURE: getp_prodCategories
-DESCRIPTION: Return all the product categories with pagination parameters.
-*/
-CREATE PROCEDURE getp_prodCategories(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM ProductCategory ',
-												 'ORDER BY product_cat_name ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-
-/*
-PROCEDURE: upd_prodCategory
-DESCRIPTION: Update an existing product category from the table.
-*/
-CREATE PROCEDURE upd_prodCategory(IN pProdCatId INT, IN pProdCatName VARCHAR(255))
-BEGIN
-	UPDATE ProductCategory
-	SET product_cat_name = pProdCatName
-	WHERE product_cat_id = pProdCatId;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/*
-TABLE: ProductSubCategory
-DESCRIPTION: Table to keep the subcategories of each product.
-*/
-CREATE TABLE ProductSubCategory (
-	product_subcat_id INT NOT NULL AUTO_INCREMENT,
-  product_subcat_catId INT NOT NULL, 
-  product_subcat_name VARCHAR(255) NOT NULL,
-  CONSTRAINT PK_ProdSubCat_id
-		PRIMARY KEY (product_subcat_id),
-	CONSTRAINT UQ_ProdSubCat_name
-		UNIQUE (product_subcat_name),
-	CONSTRAINT FK_ProdSubCat_CatId
-		FOREIGN KEY (product_subcat_catId)
-    REFERENCES ProductCategory (product_cat_id)
-    ON DELETE CASCADE
-);
-
-DELIMITER $$
-/*
-PROCEDURE: create_prodSubCat
-DESCRIPTION: create a new product subcategory, asociated to an product category
-*/
-CREATE PROCEDURE create_prodSubCat(IN pProdSubCatName VARCHAR(255), IN pCatId INT)
-BEGIN
-	INSERT INTO ProductSubCategory (product_subcat_name, product_subcat_catId) 
-  VALUES (pProdSubCatName, pCatId);
-  SET @PRODUCT_SUBCAT_ID = LAST_INSERT_ID();
-  SELECT * FROM ProductSubCategory WHERE product_subcat_id = @PRODUCT_SUBCAT_ID;
-END $$
-
-/*
-PROCEDURE: getp_prodSubCategories
-DESCRIPTION: Get all the product sub categories with pagination parameters.
-*/
-CREATE PROCEDURE getp_prodSubCategories(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255),
-																				IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT pc.product_cat_id AS "Category_id", pc.product_cat_name AS "Category_name",',
-												 'psc.product_subcat_id AS "SubCategory_id", psc.product_subcat_name AS "SubCategory_name" ',
-												 'FROM ProductSubCategory psc ',
-                         'RIGHT JOIN ProductCategory pc ON psc.product_subcat_catId = pc.product_cat_id ',
-												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-
-/*
-FUNCTION: get_subcat_cat
-DESCRIPTION: Return the id of the category of an specific subcategory.
-*/
-CREATE FUNCTION get_subcat_cat(pProdSubCatId INT)
-	RETURNS INT DETERMINISTIC
-BEGIN
-	SET @v := (SELECT pc.product_cat_id FROM ProductSubCategory psc
-						 INNER JOIN ProductCategory pc ON psc.product_subcat_catId = pc.product_cat_id
-						 WHERE product_subcat_id = pProdSubCatId);
-	RETURN @v;
-END $$
-
-/*
-PROCEDURE: upd_prodSubCategory
-DESCRIPTION: Update an existing product subcategory.
-*/
-CREATE PROCEDURE upd_prodSubCategory(IN pProdSubCatId INT, IN pProdSubCatName VARCHAR(255))
-BEGIN
-	UPDATE ProductSubCategory
-	SET product_subcat_name = pProdSubCatName
-	WHERE product_subcat_id = pProdSubCatId;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DROP TABLE IF EXISTS Product;
-CREATE TABLE Product (
-	product_id INT NOT NULL AUTO_INCREMENT,
-  supplier_id INT NOT NULL,
-  product_name VARCHAR(255) NOT NULL,
-  product_cat_id INT NOT NULL,
-  product_subcat_id INT NOT NULL,
-  is_available VARCHAR(20) NOT NULL DEFAULT 'YES',
-  CONSTRAINT PK_Product
-		PRIMARY KEY (product_id),
-	CONSTRAINT FK_Product_catId
-		FOREIGN KEY (product_cat_id)
-    REFERENCES ProductCategory (product_cat_id)
-    ON DELETE RESTRICT,
-	CONSTRAINT FK_Product_subcatId
-		FOREIGN KEY (product_subcat_id)
-    REFERENCES ProductSubCategory (product_subcat_id)
-    ON DELETE RESTRICT,
-	CONSTRAINT UQ_Product_name
-		UNIQUE (product_name)
-);
-
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS create_product$$
-CREATE PROCEDURE create_product(IN pProdName VARCHAR(255), IN pSubCatId INT,
-																IN pIsAvailable VARCHAR(10))
-BEGIN
-	SET @category_id := get_subcat_cat(pSubCatId);
-  IF (@category_id IS NULL)
-		THEN SELECT 'No subcategory with that id' AS 'Error';
-	ELSE
-		INSERT INTO Product (product_name, product_cat_id, product_subcat_id, is_available)
-		VALUES (pProdName, @category_id, pSubCatId, pIsAvailable);
-		SET @PRODUCT_ID = LAST_INSERT_ID();
-		SELECT * FROM Product WHERE product_id = @PRODUCT_ID;
-  END IF;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_products$$
-CREATE PROCEDURE getp_products(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM Product ',
-												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS upd_product$$
-CREATE PROCEDURE upd_product(IN pProductId INT, IN pProductName VARCHAR(255), IN pSubCatId INT, IN pIsAvailable VARCHAR(255))
-BEGIN
-	SET @category_id := get_subcat_cat(pSubCatId);
-  IF (@category_id IS NULL)
-		THEN SELECT 'No subcategory with that id' AS 'Error';
-	ELSE
-		UPDATE Product
-    SET product_name = pProductName, product_cat_id = @category_id, product_subcat_id = pSubCatId,
-				is_available = pIsAvailable
-		WHERE product_id = pProductId;
-  END IF;
-END $$
-DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DROP TABLE IF EXISTS BusinessStock;
-CREATE TABLE BusinessStock(
-	product_id INT NOT NULL,
-  quantity INT NOT NULL,
-  CONSTRAINT PK_BussStock
-		PRIMARY KEY (product_id),
-	CONSTRAINT FK_BussStock_prodId
-		FOREIGN KEY (product_id)
-    REFERENCES Product (product_id)
-    ON DELETE RESTRICT
-);
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_businessStock$$
-CREATE PROCEDURE getp_businessStock(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
-BEGIN
-	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT * FROM BusinessStock ',
-												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
-												 'LIMIT ', pStart, ', ', pElemPerPage);
-	PREPARE myQuery FROM @strQuery;
-  EXECUTE myQuery;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-DROP PROCEDURE IF EXISTS reg_product_bussStock$$
--- Registra productos nuevos.
-CREATE PROCEDURE reg_product_bussStock(IN pProductId INT, IN pQuantity INT)
-BEGIN
-	INSERT INTO BusinessStock (product_id, quantity)
-  VALUES (pProductId, pQuantity);
-  SELECT p.product_id, p.product_name, bs.quantity FROM BusinessStock bs
-  INNER JOIN Product p ON p.product_id = bs.product_id
-  WHERE bs.product_id = pProductId;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-CREATE FUNCTION get_product_quantity(pProductId INT)
-	RETURNS INT DETERMINISTIC
-BEGIN
-	SET @v := (SELECT quantity FROM BusinessStock WHERE product_id = pProductId);
-  return @v;
-END $$
-DELIMITER ;
-
--- Registra mas productos a uno ya registrado.
-DELIMITER $$
-CREATE PROCEDURE fill_product_bussStock(IN pProductId INT, IN pQuantity INT)
-BEGIN
-	SET @actual_quantity := get_product_quantity(pProductId);
-  SET @new_quantity := (@actual_quantity + pQuantity);
-  UPDATE BusinessStock
-  SET quantity = @new_quantity WHERE product_id = pProductId;
-END $$
-DELIMITER ;
-
--- Unregistra cierta cantidad de productos en stock
-DELIMITER $$
-CREATE PROCEDURE unreg_product_bussStock(IN pProductId INT, IN pQuantity INT)
-BEGIN
-	SET @actual_quantity := get_product_quantity(pProductId);
-  SET @new_quantity := (@actual_quantity - pQuantity);
-  IF (@new_quantity <= 0) THEN
-		UPDATE BusinessStock
-		SET quantity = 0 WHERE product_id = pProductId;
-	ELSE
-		UPDATE BusinessStock
-		SET quantity = @new_quantity WHERE product_id = pProductId;
-	END IF;
 END $$
 DELIMITER ;
 
