@@ -82,7 +82,7 @@ export const getPagedVehicles = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, retrieving vehicles...`);
   const parameter = req.param('parameter') || 'vehicle_id';
   const order = req.param('order') || 'DESC';
-  database.query(VEHICLE_QUERY.SELECT_VEHICLES, Object.values(req.body), (error, results) => {
+  database.query(VEHICLE_QUERY.SELECT_VEHICLES, (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
         .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Vehicles not found`));
@@ -90,9 +90,8 @@ export const getPagedVehicles = (req, res) => {
       const page = req.param('pag') ? Number(req.param('pag')) : 1;
       const limit = req.param('limit') ? Number(req.param('limit')) : 10;
       // Calculation for paginations parameters...
-      const numOfResults = results[0].length;
-      const numOfPages = Math.ceil(numOfResults / limit);
-      if (numOfResults == 3) { numOfPages = 2; }
+      let numOfResults = results.length;
+      let numOfPages = Math.ceil(numOfResults / limit);
       if (page > numOfPages) {
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid paginations parameters`));
@@ -106,18 +105,21 @@ export const getPagedVehicles = (req, res) => {
       // Valid pagination parameters
       const startingLimit = (page - 1) * limit;
       database.query(VEHICLE_QUERY.SELECT_PAGED_VEHICLES, [parameter, order, startingLimit, limit], (error, results) => {
-        if (error) throw error;
-        if (!results[0]) {
-          res.status(HttpStatus.NOT_FOUND.code)
-            .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Not vehicles found`));
-        } else {
-          let iterator = (page - limit) < 1 ? 1 : page - limit;
-          let endingLink = (iterator + 9) <= numOfPages ? (iterator + 9) : page + (numOfPages + 9);
-          if (endingLink < (page + (limit - 1))) {
-            iterator -= (page + (limit - 1) - numOfPages);
+        if (error) {
+          throw error;
+        } else { 
+          if (!results[0]) {
+            res.status(HttpStatus.NOT_FOUND.code)
+              .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Not vehicles found`));
+          } else {
+            let iterator = (page - limit) < 1 ? 1 : page - limit;
+            let endingLink = (iterator + 9) <= numOfPages ? (iterator + 9) : page + (numOfPages + 9);
+            if (endingLink < (page + (limit - 1))) {
+              iterator -= (page + (limit - 1) - numOfPages);
+            }
+            res.status(HttpStatus.OK.code)
+              .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, { data: results[0], page, numOfPages }));
           }
-          res.status(HttpStatus.OK.code)
-            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, { data: results[0], page, numOfPages }));
         }
       });
     }
