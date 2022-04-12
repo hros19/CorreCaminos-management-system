@@ -33,7 +33,8 @@ export const fillVehicleTank = (req, res) => {
         .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with id ${req.params.id} was not found`));
     } else {
       // Vehicle founded, fill the tank...
-      database.query(VEHICLE_QUERY.CHECK_VEHICLE_STATUS, [req.params.id], (error, results) => {
+      const gasAmount = req.param('gasAmount') || 1;
+      database.query(VEHICLE_QUERY.FILL_VEHICLE_TANK, [req.params.id, gasAmount], (error, results) => {
         if (results[0]) {
           res.status(HttpStatus.METHOD_NOT_ALLOWED.code)
             .send(new Response(HttpStatus.METHOD_NOT_ALLOWED.code, HttpStatus.METHOD_NOT_ALLOWED.status, `The tank already filled today`, results[0]));
