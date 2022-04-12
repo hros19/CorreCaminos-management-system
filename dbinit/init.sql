@@ -46,7 +46,8 @@ BEGIN
 		VALUES (pCarBrand, pCarPlaque, pTypeOfGas, pTankCapacity, pTankStatus, pKilomTraveled);
 		SET @VEHICLE_ID = LAST_INSERT_ID();
 		SELECT * FROM Vehicle WHERE vehicle_id = @VEHICLE_ID;
-    ELSE SELECT 'Invalid tank values' AS 'Error';
+  ELSE
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: The vehicle could not be created.', MYSQL_ERRNO = '45000';
 	END IF;
 END $$
 DELIMITER ;
