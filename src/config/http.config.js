@@ -182,4 +182,6 @@ const HttpStatus = {
   VARIANT_ALSO_NEGOTIATES: { code: 506, status: 'VARIANT_ALSO_NEGOTIATES' },
   NOT_EXTENDED: { code: 510, status: 'NOT_EXTENDED' },
   NETWORK_AUTHENTICATION_REQUIRED: { code: 511, status: 'NETWORK_AUTHENTICATION_REQUIRED' }
-}
+};
+
+export default HttpStatus;
