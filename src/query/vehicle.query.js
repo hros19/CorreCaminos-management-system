@@ -4,6 +4,7 @@ const VEHICLE_QUERY = {
   CREATE_VEHICLE: 'CALL create_vehicle(?, ?, ?, ?, ?, ?)', // sets
   SELECT_PAGED_VEHICLES: 'CALL getp_vehicles(?, ?, ?, ?, ?)', // sets
   SELECT_VEHICLE: 'SELECT * FROM Vehicle WHERE vehicle_id = ?', // set
+  SELECT_VEHICLES: 'SELECT * FROM Vehicle', // sets
   UPDATE_VEHICLE: 'CALL upd_vehicle_details(?, ?, ?, ?, ?)',
   DELETE_VEHICLE: 'DELETE FROM Vehicle WHERE vehicle_id = ?'
 }
