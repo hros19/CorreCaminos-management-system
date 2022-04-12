@@ -13,7 +13,7 @@ vehicleRoutes.route('/:id')
   .delete(deleteVehicle);
 
 vehicleRoutes.route('/:id/status')
-  .get(checkVehicleStatus); // Paginated
+  .get(checkVehicleStatus);
 
 vehicleRoutes.route('/:id/fillTank')
   .put(fillVehicleTank); // id, gasAmount
