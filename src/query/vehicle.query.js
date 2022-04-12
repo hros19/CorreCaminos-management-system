@@ -6,7 +6,8 @@ const VEHICLE_QUERY = {
   SELECT_VEHICLE: 'SELECT * FROM Vehicle WHERE vehicle_id = ?', // set
   SELECT_VEHICLES: 'SELECT * FROM Vehicle', // sets
   UPDATE_VEHICLE: 'CALL upd_vehicle_details(?, ?, ?, ?, ?)',
-  DELETE_VEHICLE: 'DELETE FROM Vehicle WHERE vehicle_id = ?'
-}
+  DELETE_VEHICLE: 'DELETE FROM Vehicle WHERE vehicle_id = ?',
+  REGISTER_KILOMETERS: 'CALL reg_kilometers(?, ?)',
+};
 
 export default VEHICLE_QUERY;
