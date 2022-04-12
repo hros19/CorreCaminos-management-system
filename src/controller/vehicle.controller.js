@@ -62,6 +62,10 @@ export const fillVehicleTank = (req, res) => {
 export const createVehicle = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, creating vehicle...`);
   database.query(VEHICLE_QUERY.CREATE_VEHICLE, Object.values(req.body), (error, results) => {
+    if (error) {
+      logger.error(`Error creating vehicle: ${error}`);
+      throw error;
+    }
     if (!results) {
       logger.error(error.message);
       res.status(HttpStatus.BAD_REQUEST.code)
@@ -133,6 +137,25 @@ export const getVehicle = (req, res) => {
   });
 };
 
+export const updateVehicle = (req, res) => {
+  logger.info(`${req.method} ${req.originalUrl}, updating vehicle...`);
+  database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
+    if (!results[0]) {
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with the id ${req.params.id} was not found`));
+    } else {
+      database.query(VEHICLE_QUERY.UPDATE_VEHICLE, [req.params.id, ...Object.values(req.body)], (error, results) => {
+        if (error) {
+          throw error;
+        } else {
+          res.status(HttpStatus.OK.code)
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Vehicle updated successfully`, { id: req.params.id, ...req.body }));
+        }
+      });
+    }
+  });
+};
+
 export const deleteVehicle = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, deleting vehicle...`);
   database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
@@ -155,3 +178,24 @@ export const deleteVehicle = (req, res) => {
     }
   });
 };
+
+export const registerKilometers = (req, res) => {
+  logger.info(`${req.method} ${req.originalUrl}, registering kilometers...`);
+  database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
+    if (!results[0]) {
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with the id ${req.params.id} was not found`));
+    } else {
+      const kilometers = req.param('kilometers') ? Number(req.param('kilometers')) : 0;
+      database.query(VEHICLE_QUERY.UPDATE_KILOMETERS, [req.params.id, kilometers], (error, results) => {
+        if (error) {
+          logger.error(`Error updating kilometers: ${error}`);
+          throw error;
+        } else {
+          res.status(HttpStatus.OK.code)
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Kilometers updated successfully`, { id: req.params.id, ...req.body }));
+        }
+      });
+    }
+  });
+}
