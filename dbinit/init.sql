@@ -103,8 +103,8 @@ BEGIN
 	DECLARE vActualStatus FLOAT;
   SELECT Vehicle.gas_tank_status INTO vActualStatus
   FROM Vehicle WHERE Vehicle.vehicle_id = pVehicleId;
-  IF (vActualStatus > pTankCapacity)
-		THEN SELECT 'Actual status of tank is bigger' AS 'Error';
+  IF (vActualStatus > pTankCapacity) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Actual status overpass the tank maximum capacity', MYSQL_ERRNO = '1000';
 	ELSE
 		UPDATE Vehicle
 			SET car_brand = pCarBrand, car_plaque = pCarPlaque,
@@ -190,7 +190,8 @@ BEGIN
 									last_tank_refill = CURRENT_DATE
 							WHERE vehicle_id = pVehicleId;
         END CASE;
-		ELSE SELECT 'tank_already_filled_today' AS 'ERROR';
+	ELSE
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Gasoline tank already filled today', MYSQL_ERRNO = '1000';
 	END IF;
 END $$
 
@@ -255,6 +256,14 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
+
+CREATE PROCEDURE get_veh_maint_logs(IN pVehicleId INT)
+BEGIN
+	SELECT v.vehicle_id, mn.maintenance_type, mn.maintenance_date FROM vehicle v
+	INNER JOIN MaintenanceLog mn
+	ON v.vehicle_id = mn.vehicle_id
+	WHERE v.vehicle_id = pVehicleId;
+END$$
 
 DELIMITER ;
 
@@ -394,6 +403,9 @@ DELIMITER ;
 CALL create_vehicle('Nissan', 'ABC-123', 'Diesel', 50, 40, 300);
 CALL create_vehicle('Toyota', 'XYZ-456', 'Premium', 30, 20, 150);
 CALL create_vehicle('Tesla', 'MMM-111', 'Normal', 100, 96, 0);
+-- For testing purposes
+UPDATE Vehicle
+SET last_tank_refill = '2022-03-03' WHERE vehicle_id = 3;
 
 CALL create_maint_log(1, 'Frenos averiados');
 CALL create_maint_log(1, 'Cambio de aceite');
