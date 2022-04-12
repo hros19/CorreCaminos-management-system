@@ -195,14 +195,6 @@ CREATE TABLE MaintenanceLog (
     ON DELETE CASCADE
 );
 
--- pendiente evento para generar reporte con los clientes con pedidos pendientes.
-/*
-CREATE EVENT myEvent
-	ON SCHEDULE EVERY 10 SECOND
-		DO
-			CALL reportMaintenance(1, "Hola");
-*/
-
 DELIMITER $$
 
 /*
@@ -613,7 +605,6 @@ DELIMITER $$
 PROCEDURE: create_zone
 DESCRIPTION: Register a new zone in the table.
 */
-DELIMITER $$
 CREATE PROCEDURE create_zone(IN pZoneName VARCHAR(255))
 BEGIN
 	INSERT INTO Zone (zone_name) VALUES (pZoneName);
@@ -1897,6 +1888,8 @@ BEGIN
   RETURN @stat;
 END $$
 
+DELIMITER ;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 TABLE ClientOrderDetail
@@ -1966,6 +1959,10 @@ BEGIN
   END IF;
 END $$
 
+/*
+PROCEDURE: create_cltOrdDet
+DESCRIPTION: Create a new order detail of a client.
+*/
 CREATE PROCEDURE create_cltOrdDet (IN pClientOrderId INT, IN pProductId INT, IN pQuantity INT)
 BEGIN
 	SET @readiness = get_prod_readiness(pProductId, pQuantity);
