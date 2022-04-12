@@ -32,11 +32,12 @@ CREATE TABLE Vehicle (
 		UNIQUE (car_plaque)
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE create_vehicle
 Create a register on the table Vehicle and return the new element created.
 */
-DELIMITER $$
 CREATE PROCEDURE create_vehicle(IN pCarBrand VARCHAR(255), IN pCarPlaque VARCHAR(255),
 	IN pTypeOfGas VARCHAR(255), IN pTankCapacity FLOAT, IN pTankStatus FLOAT, IN pKilomTraveled FLOAT)
 BEGIN
@@ -50,7 +51,6 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: The vehicle could not be created.', MYSQL_ERRNO = '45000';
 	END IF;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE reg_kilometers
@@ -60,7 +60,6 @@ of tank_gas_status considering 1 kilometer is equivalent to 1 Liter of gasoline.
 NOTE: This function doesnt make any validations, is necesary to validate the pKilometers
 is not bigger than the Vehicle.gas_tank_status
 */
-DELIMITER $$
 CREATE PROCEDURE reg_kilometers(IN pVehicleId INT, IN pKilometers FLOAT)
 BEGIN
 	DECLARE vActualKilometers FLOAT;
@@ -71,7 +70,6 @@ BEGIN
 										 gas_tank_status = (gas_tank_status - pKilometers)
   WHERE vehicle_id = pVehicleId;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE upd_vehicle_details
@@ -80,7 +78,6 @@ Let update the basic information of a vehicle.
 It also validates that a user does not enter a new maximum gasoline capacity that is less than 
 the current capacity of the tank.
 */
-DELIMITER $$
 CREATE PROCEDURE upd_vehicle_details(IN pVehicleId INT, IN pCarBrand VARCHAR(255), IN pCarPlaque VARCHAR(255),
 	IN pTypeOfGas VARCHAR(255), IN pTankCapacity FLOAT)
 BEGIN
@@ -96,13 +93,11 @@ BEGIN
 		WHERE vehicle_id = pVehicleId;
   END IF;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE getp_vehicles
 Get all the Vehicles with parameters of pagination and also a parameter for the order.
 */
-DELIMITER $$
 CREATE PROCEDURE getp_vehicles(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255),
 	IN pStart INT, IN pElemPerPage INT)
 BEGIN
@@ -112,7 +107,6 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
 /*
 FUNCTION calcQuartsOfValue
@@ -120,7 +114,6 @@ Aritmetic function that performs a calculation to determinate in which quartil w
 pMaximum value is the pActual value.
 @returns the number of the quartil.
 */
-DELIMITER $$
 CREATE FUNCTION calcQuartsOfValue(pMaximum FLOAT, pActual FLOAT)
 	RETURNS INT DETERMINISTIC
   BEGIN
@@ -133,13 +126,11 @@ CREATE FUNCTION calcQuartsOfValue(pMaximum FLOAT, pActual FLOAT)
 			ELSE RETURN 1;
     END IF;
 	END $$
-DELIMITER ;
 
 /*
 PROCEDURE getVehicleStatus
 Get the basic information of a specific vehicle.
 */
-DELIMITER $$
 CREATE PROCEDURE get_veh_status(IN pVehicleId INT)
 BEGIN
   SELECT Vehicle.car_plaque, Vehicle.kilometers_traveled,
@@ -147,7 +138,6 @@ BEGIN
 	FROM Vehicle 
 	WHERE vehicle_id = pVehicleId;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE fillVehicleTank
@@ -156,7 +146,6 @@ Let fill the tank with a specific pAmoutOfGas.
 It also validates that the size entered into the tank does not exceed the maximum gas 
 tank size. What it does in that case is simply ignore the leftover gasoline.
 */
-DELIMITER $$
 CREATE PROCEDURE fillVehicleTank(IN pVehicleId INT, IN pAmountOfGas FLOAT)
 BEGIN
 	DECLARE vLastRefill DATE;
@@ -185,10 +174,10 @@ BEGIN
 		ELSE SELECT 'tank_already_filled_today' AS 'ERROR';
 	END IF;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- XXMAINTENANCELOG
 /*
 TABLE MaintenanceLog
 Table to save all the maintenance done to the company's vehicles.
@@ -214,12 +203,13 @@ CREATE EVENT myEvent
 			CALL reportMaintenance(1, "Hola");
 */
 
+DELIMITER $$
+
 /*
 PROCEDURE create_maint_log
 Permite crear un nuevo reporte de mantenimiento a un vehículo.
 Retorna la fila insertada.
 */
-DELIMITER $$
 CREATE PROCEDURE create_maint_log(IN pVehicleId INT, IN pType VARCHAR(255))
 BEGIN
 	INSERT INTO MaintenanceLog (vehicle_id, maintenance_type)
@@ -227,26 +217,22 @@ BEGIN
   SET @MAINT_LOG = LAST_INSERT_ID();
   SELECT * FROM MaintenanceLog WHERE maintenance_id = @MAINT_LOG;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE upd_maint_log
 Allows you to update vehicle maintenance records.
 */
-DELIMITER $$
 CREATE PROCEDURE upd_maint_log(IN pMaintenanceLogId INT, IN pType VARCHAR(255))
 BEGIN
 	UPDATE MaintenanceLog
 		SET maintenance_type = pType
     WHERE maintenance_id = pMaintenanceLogId;
 END $$
-DELIMITER ;
 
 /*
 PRCOEDURE getp_veh_maint_logs
 It allows to obtain all the records of maintenance done to a particular vehicle.
 */
-DELIMITER $$
 CREATE PROCEDURE getp_veh_maint_logs(IN pVehicleId INT, IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -258,6 +244,7 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -274,24 +261,23 @@ CREATE TABLE JobTitle (
 		UNIQUE (job_title_name)
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE create_job_title
 Creates a new job_title in the respective table and return the new row inserted.
 */
-DELIMITER $$
 CREATE PROCEDURE create_job_title(IN pJobTitle VARCHAR(255))
 BEGIN
 	INSERT INTO JobTitle (job_title_name) VALUES (pJobTitle);
   SET @JOBTITLE_ID = LAST_INSERT_ID();
   SELECT * FROM JobTitle WHERE job_title_id = @JOBTITLE_ID;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE getp_job_titles
 Get all the job titles of the company with pagination parameters.
 */
-DELIMITER $$
 CREATE PROCEDURE getp_job_titles(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -301,18 +287,17 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE upd_job_title
 Let update a job title on the table.
 */
-DELIMITER $$
 CREATE PROCEDURE upd_job_title(IN pJobTitleId INT, IN pJobTitle VARCHAR(255))
 BEGIN
 	UPDATE JobTitle
   SET job_title_name = pJobTitle WHERE job_title_id = pJobTitleId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -344,11 +329,12 @@ CREATE TABLE Driver (
 		UNIQUE (vehicle_id)
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE create_driver
 Let insert a driver in the respective table and return the row inserted.
 */
-DELIMITER $$
 CREATE PROCEDURE create_driver(IN pVehicleId INT, IN pJobTitleId INT, IN pDriverName VARCHAR(255),
 															 IN pDriverDocId VARCHAR(255), IN pSalary FLOAT)
 BEGIN
@@ -389,6 +375,7 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -425,13 +412,14 @@ CREATE TABLE GeologicalAddress (
 		UNIQUE (latitude, longitude)
 );
 
+DELIMITER $$
+
 /*
 FUNCTION: create_geo_addr
 DESCRIPTION: Create a register on the table GeologicalAddress and returns the id of the row.
 The purpose of this function is for being used in a create_Client procedure, we would call
 this function to asign the new client with the geological address.
 */
-DELIMITER $$
 CREATE FUNCTION create_geo_addr(pLatitude FLOAT, pLongitude FLOAT)
 	RETURNS INT DETERMINISTIC
 BEGIN
@@ -440,6 +428,7 @@ BEGIN
   SET @ID = LAST_INSERT_ID();
   RETURN @ID;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -456,12 +445,13 @@ CREATE TABLE DeliveryDay (
 		UNIQUE (dev_day_name)
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE: create_dev_day
 DESCRIPTION: just register the new day and returns it.
 Maybe is just an unnecesary functionality, we can just insert the days manually.
 */
-DELIMITER $$
 CREATE PROCEDURE create_dev_day(IN pDevDayName VARCHAR(255))
 BEGIN
 	INSERT INTO DeliveryDay (dev_day_name) VALUES (pDevDayName);
@@ -482,19 +472,18 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE: upd_dev_day
 DESCRIPTION: Update an actually delivery day.
 */
-DELIMITER $$
 DROP PROCEDURE IF EXISTS upd_dev_day$$
 CREATE PROCEDURE upd_dev_day(IN pDevDayId INT, IN pDevDayName VARCHAR(255))
 BEGIN
 	UPDATE DeliveryDay
   SET dev_dev_name = pDevDayName WHERE dev_day_id = pDevDayId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -512,11 +501,12 @@ CREATE TABLE DeliveryInterval (
 		UNIQUE (dev_interval_name)
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE: create_dev_interval
 DESCRIPTION: Creates a new delivery interval
 */
-DELIMITER $$
 CREATE PROCEDURE create_dev_interval(IN pDevIntervalName VARCHAR(255))
 BEGIN
 	INSERT INTO DeliveryInterval (dev_interval_name) VALUES (pDevIntervalName);
@@ -547,6 +537,7 @@ BEGIN
 	UPDATE DeliveryInterval
   SET dev_interval_name = pDevIntervalName WHERE dev_interval_id = pDevIntervalId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -563,11 +554,12 @@ CREATE TABLE BusinessType (
 		UNIQUE (business_type_name)
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE: create_buss_type
 DESCRIPTION: Inserts a new business type on the table and returns it.
 */
-DELIMITER $$
 CREATE PROCEDURE create_buss_type(IN pBussTypeName VARCHAR(255))
 BEGIN
 	INSERT INTO BusinessType (business_type_name) VALUES (pBussTypeName);
@@ -598,6 +590,7 @@ BEGIN
 	UPDATE BusinessType
   SET business_type_name = pBusTypeName WHERE business_type_id = pBusTypeId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -613,6 +606,8 @@ CREATE TABLE Zone (
 	CONSTRAINT UQ_Zone_Name
 		UNIQUE (zone_name)
 );
+
+DELIMITER $$
 
 /*
 PROCEDURE: create_zone
@@ -649,6 +644,7 @@ BEGIN
 	UPDATE Zone
   SET zone_name = pZoneName WHERE zone_id = pZoneId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -667,6 +663,7 @@ CREATE TABLE Route (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_route
 DESCRIPTION: register a new route in the table.
@@ -708,6 +705,7 @@ BEGIN
 		ELSE SELECT 'Invalid inputs' AS 'Error';
 	END IF;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -731,6 +729,7 @@ CREATE TABLE ZoneXRoute (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_zonexroute
 DESCRIPTION: Creates a new relationship from a zone and a route and returns the information of the row.
@@ -768,6 +767,7 @@ BEGIN
   WHERE Zone.zone_id = 1
   LIMIT pStart, pElemPerPage;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -838,6 +838,7 @@ CREATE TABLE Supplier (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_supplier
 DESCRIPTION: register a new supplier in the table and returns it.
@@ -880,6 +881,7 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -897,6 +899,7 @@ CREATE TABLE ProductCategory (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_prodCat
 DESCRIPTION: Creates a new product category
@@ -933,6 +936,7 @@ BEGIN
 	SET product_cat_name = pProdCatName
 	WHERE product_cat_id = pProdCatId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -955,6 +959,7 @@ CREATE TABLE ProductSubCategory (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_prodSubCat
 DESCRIPTION: create a new product subcategory, asociated to an product category
@@ -1008,6 +1013,7 @@ BEGIN
 	SET product_subcat_name = pProdSubCatName
 	WHERE product_subcat_id = pProdSubCatId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1058,6 +1064,7 @@ CREATE TABLE Product (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE create_product
 DESCRIPTION: Creates a new product on the database.
@@ -1111,8 +1118,6 @@ END $$
 PROCEDURE getp_sup_products
 DESCRIPTION: Get all the products of a supplier.
 */
-DELIMITER $$
-DROP PROCEDURE IF EXISTS getp_sup_products$$
 CREATE PROCEDURE getp_sup_products(IN pSupplierId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1127,6 +1132,7 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;	
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1146,6 +1152,7 @@ CREATE TABLE BusinessStock(
 );
 
 DELIMITER $$
+
 /*
 FUNCTION get_product_status
 DESCRIPTION: Returns the actual status of a product.
@@ -1224,6 +1231,7 @@ BEGIN
 		SET quantity = @new_quantity WHERE product_id = pProductId;
 	END IF;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1281,11 +1289,11 @@ CREATE TABLE SupplierOrder (
 );
 
 DELIMITER $$
+
 /*
 FUNCTION: getq_ordersBySup
 DESCRIPTION: Get the quantity of the total orders by a specific supplier.
 */
-DROP FUNCTION IF EXISTS getq_ordersBySup$$
 CREATE FUNCTION getq_ordersBySup(pSupplierId INT)
 	RETURNS INT DETERMINISTIC
 BEGIN
@@ -1297,7 +1305,6 @@ END$$
 FUNCTION: getd_lastOrderSup
 DESCRIPTION: Returns the date of the last order by an specific Supplier.
 */
-DROP FUNCTION IF EXISTS getd_lastOrderSup$$
 CREATE FUNCTION getd_lastOrderSup(pSupplierId INT)
 	RETURNS DATE DETERMINISTIC
 BEGIN
@@ -1336,6 +1343,8 @@ BEGIN
   END IF;
 END $$
 
+DELIMITER ;
+
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 TABLE: SupplierOrdDet
@@ -1358,11 +1367,11 @@ CREATE TABLE SupplierOrdDet (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_supOrdDet
 DESCRIPTION: Creates a new supplier order detail.
 */
-DROP PROCEDURE IF EXISTS create_supOrdDet$$
 CREATE PROCEDURE create_supOrdDet(IN pSupplierOrderId INT, IN pProductId INT, IN pQuantity INT)
 BEGIN
 	INSERT INTO SupplierOrdDet (supplier_order_id, product_id, quantity)
@@ -1381,10 +1390,10 @@ BEGIN
     CALL fill_product_bussStock(pProductId, pQuantity);
   END IF;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 /*
 TABLE: Client
 DESCRIPTION: Table for all the clients of the company.
@@ -1427,6 +1436,7 @@ CREATE TABLE Client (
 ); 
 
 DELIMITER $$
+
 /*
 PROCEDURE: upd_client
 DESCRIPTION: Update the information of an existing client.
@@ -1510,12 +1520,10 @@ BEGIN
   EXECUTE myQuery;
   SET result = @RES;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SELECT * FROM Zone;
-SELECT * FROM DeliveryInterval;
-SELECT * FROM BusinessType;
 -- Zones: Norte, Central, Sur
 -- DI: DAILY, WEEKLY, TWO_PER_WEEK, BIWEEKLY
 -- BT: Chino, Supermercado, Gasolinera, Automercado, Restaurante.
@@ -1553,6 +1561,7 @@ CREATE TABLE ClientXDevDay (
 );
 
 DELIMITER $$
+
 /*
 PROCEDURE: create_clientxdevday
 DESCRIPTION: Create a new asociation of a client and a delivery day.
@@ -1598,6 +1607,7 @@ BEGIN
 	INNER JOIN DeliveryDay devd ON devd.dev_day_id = cxdv.dev_day_id
 	WHERE Client.client_id = pClientId;
 END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1627,6 +1637,7 @@ CREATE TABLE ClientOrder (
 );
 
 DELIMITER $$
+
 /*
 FUNCTION: getstr_ClnDevDays
 DESCRIPTION: Get in a string all the delivery days of a specific client.
@@ -1885,7 +1896,6 @@ BEGIN
 	SET @stat := (SELECT order_status FROM ClientOrder WHERE client_order_id = pClientOrderId);
   RETURN @stat;
 END $$
-DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
@@ -1908,11 +1918,12 @@ CREATE TABLE ClientOrderDetail (
     ON DELETE CASCADE
 );
 
+DELIMITER $$
+
 /*
 PROCEDURE getp_cltOrdDet
 DESCRIPTION: Returns all the client order details with pagination.
 */
-DELIMITER $$
 CREATE PROCEDURE getp_cltOrdDet(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1922,13 +1933,11 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
-DELIMITER ;
 
 /*
 PROCEDURE getp_cltOrdDetOf
 DESCRIPTION: Give all the details of the order of a client with pagination.
 */
-DELIMITER $$
 CREATE PROCEDURE getp_cltOrdDetOf(IN pClientOrderId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
@@ -1943,6 +1952,8 @@ BEGIN
 END $$
 
 /*
+FUNCTION get_prod_readiness
+DESCRIPTION: Returns the readiness of a product in a string.
 */
 CREATE FUNCTION get_prod_readiness(pProductId INT, pQuantity INT)
 	RETURNS VARCHAR(50) DETERMINISTIC
@@ -1995,6 +2006,7 @@ BEGIN
     SET MESSAGE_TEXT = 'Order isnot ready for dispatch', MYSQL_ERRNO = 1000;
   END IF;
 END $$
+
 DELIMITER ;
 
 
