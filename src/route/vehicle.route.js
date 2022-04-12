@@ -21,5 +21,4 @@ vehicleRoutes.route('/:id/fillTank')
 vehicleRoutes.route('/:id/registerKilometers')
   .put(registerKilometers); // id, kilometers
 
-
 export default vehicleRoutes;
