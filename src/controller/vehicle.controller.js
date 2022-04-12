@@ -9,7 +9,7 @@ export const checkVehicleStatus = (req, res) => {
   database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
-        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with id ${req.params.id} was not founded`));
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with id ${req.params.id} was not found`));
     } else {
       // Vehicle founded, just retrieve the information.
       database.query(VEHICLE_QUERY.CHECK_VEHICLE_STATUS, [req.params.id], (error, results) => {
@@ -30,7 +30,7 @@ export const fillVehicleTank = (req, res) => {
   database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
-        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with id ${req.params.id} was not founded`));
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with id ${req.params.id} was not found`));
     } else {
       // Vehicle founded, fill the tank...
       database.query(VEHICLE_QUERY.CHECK_VEHICLE_STATUS, [req.params.id], (error, results) => {
@@ -64,7 +64,7 @@ export const createVehicle = (req, res) => {
     if (!results) {
       logger.error(error.message);
       res.status(HttpStatus.BAD_REQUEST.code)
-        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Vehicle not registered`));
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The vehicle was not registered`));
     } else {
       const vehicle = results[0][0];
       res.status(HttpStatus.CREATED.code)
@@ -104,7 +104,7 @@ export const getPagedVehicles = (req, res) => {
         if (error) throw error;
         if (!results[0]) {
           res.status(HttpStatus.NOT_FOUND.code)
-            .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Not vehicles founded`));
+            .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Not vehicles found`));
         } else {
           let iterator = (page - limit) < 1 ? 1 : page - limit;
           let endingLink = (iterator + 9) <= numOfPages ? (iterator + 9) : page + (numOfPages + 9);
@@ -124,10 +124,33 @@ export const getVehicle = (req, res) => {
   database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
-        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Vehicle with the id ${req.params.id} was not founded`));
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with the id ${req.params.id} was not found`));
     } else {
       res.status(HttpStatus.OK.code)
         .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Vehicle founded`, results[0]));
+    }
+  });
+};
+
+export const deleteVehicle = (req, res) => {
+  logger.info(`${req.method} ${req.originalUrl}, deleting vehicle...`);
+  database.query(VEHICLE_QUERY.SELECT_VEHICLE, [req.params.id], (error, results) => {
+    if (!results[0]) {
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with the id ${req.params.id} was not found`));
+    } else {
+      database.query(VEHICLE_QUERY.DELETE_VEHICLE, [req.params.id], (error, results) => {
+        if (results.affectedRows > 0) {
+          res.status(HttpStatus.OK.code)
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `The vehicle with id ${req.params.id} was deleted sucessfully`));
+        }
+        if (error) {
+          throw error;
+        } else {
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+            .send(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during deletion`);
+        }
+      });
     }
   });
 };
