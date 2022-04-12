@@ -48,7 +48,18 @@ BEGIN
 		SET @VEHICLE_ID = LAST_INSERT_ID();
 		SELECT * FROM Vehicle WHERE vehicle_id = @VEHICLE_ID;
   ELSE
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: The vehicle could not be created.', MYSQL_ERRNO = '45000';
+		IF (pKilomTraveled < 0) THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid value for (kilometers_traveled)', MYSQL_ERRNO = '1000';
+		ELSEIF (pTankCapacity < 0) THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid value for (gas_tank_capacity)', MYSQL_ERRNO = '1001';
+		ELSEIF (pTankStatus < 0) THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid value for (gas_tank_capacity)', MYSQL_ERRNO = '1002';
+		ELSEIF (pTankCapacity < pTankStatus) THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '(gas_tank_capacity) cannot be less than the current state (gas_tank_status)', MYSQL_ERRNO = '1003';
+		ELSE
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unexpected error during creation of vehicle', MYSQL_ERRNO = '1004';
+		END IF;
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: The vehicle could not be created.', MYSQL_ERRNO = '1000';
 	END IF;
 END $$
 
@@ -63,12 +74,20 @@ is not bigger than the Vehicle.gas_tank_status
 CREATE PROCEDURE reg_kilometers(IN pVehicleId INT, IN pKilometers FLOAT)
 BEGIN
 	DECLARE vActualKilometers FLOAT;
-  SELECT kilometers_traveled INTO vActualKilometers
+	DECLARE vActualTankStatus FLOAT;
+  SELECT kilometers_traveled, gas_tank_status INTO vActualKilometers, vActualTankStatus
   FROM Vehicle WHERE vehicle_id = pVehicleId;
-  
-  UPDATE Vehicle SET kilometers_traveled = (vActualKilometers + pKilometers),
-										 gas_tank_status = (gas_tank_status - pKilometers)
-  WHERE vehicle_id = pVehicleId;
+  -- Check if the kilometers are valid
+	IF (vActualTankStatus - pKilometers < 0) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Need more gasoline to travel that amount of kilometers', MYSQL_ERRNO = '1000';
+	ELSEIF (pKilometers < 0) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unvalid kilometers by parameter', MYSQL_ERRNO = '1001';
+	ELSE
+		UPDATE Vehicle SET kilometers_traveled = (vActualKilometers + pKilometers),
+											gas_tank_status = (gas_tank_status - pKilometers)
+		WHERE vehicle_id = pVehicleId;
+	END IF;
+	COMMIT;
 END $$
 
 /*
