@@ -105,7 +105,7 @@ export const updateDriver = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, updating driver...`);
   const BODY_PARAMETERS = Object.values(req.body);
   // Check quantity of parameters
-  if (BODY_PARAMETERS.length != 5) {
+  if (BODY_PARAMETERS.length != 6) {
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
     return;
