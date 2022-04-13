@@ -9,7 +9,7 @@ CREATE DATABASE IF NOT EXISTS correcaminosdb;
 USE correcaminosdb;
 SET GLOBAL sql_mode='';
 SET GLOBAL event_scheduler = ON;
-ALTER DATABASE correcaminosdb CHARACTER SET utf8mb4;
+ALTER DATABASE correcaminosdb CHARACTER SET utf8 COLLATE utf8_unicode_ci;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- XXVEHICLE
 /*
@@ -399,27 +399,6 @@ END $$
 
 DELIMITER ;
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- Initial data from the tables above...
-CALL create_vehicle('Nissan', 'ABC-123', 'Diesel', 50, 40, 300);
-CALL create_vehicle('Toyota', 'XYZ-456', 'Premium', 30, 20, 150);
-CALL create_vehicle('Tesla', 'MMM-111', 'Normal', 100, 96, 0);
--- For testing purposes
-UPDATE Vehicle
-SET last_tank_refill = '2022-03-03' WHERE vehicle_id = 3;
-
-CALL create_maint_log(1, 'Frenos averiados');
-CALL create_maint_log(1, 'Cambio de aceite');
-CALL create_maint_log(1, 'Cambio de luces traseras');
-CALL create_maint_log(2, 'Cambio de transmisión');
-
-CALL create_job_title('Promotor');
-CALL create_job_title('Repartidor');
-
-CALL create_driver(1, 1, 'Johnny Arias', '788991010', 2000);
-CALL create_driver(2, 2, 'Marcos Rivera', '712345050', 3000);
-CALL create_driver(3, 2, 'Ronny Diaz', '790901234', 3500);
-
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 Table: GeologicalAddress
@@ -794,51 +773,6 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- Initial information from the tables above.
-CALL create_dev_day('Monday');
-CALL create_dev_day('Tuesday');
-CALL create_dev_day('Wednesday');
-CALL create_dev_day('Thursday');
-CALL create_dev_day('Friday');
-CALL create_dev_day('Saturday');
-CALL create_dev_day('Sunday');
-
-CALL create_dev_interval('DAILY');
-CALL create_dev_interval('WEEKLY');
-CALL create_dev_interval('TWO_PER_WEEK');
-CALL create_dev_interval('BIWEEKLY');
-
-CALL create_buss_type('Chino');
-CALL create_buss_type('Supermercado');
-CALL create_buss_type('Gasolinera');
-CALL create_buss_type('Automercado');
-CALL create_buss_type('Restaurante');
-
-CALL create_zone('Norte');
-CALL create_zone('Central');
-CALL create_zone('Sur');
-
-CALL create_route('Ruta_A', 13.5);
-CALL create_route('Ruta_B', 2.2);
-CALL create_route('Ruta_C', 10.4);
-CALL create_route('Ruta_D', 15.9);
-CALL create_route('Ruta_E', 6.5);
-CALL create_route('Ruta_F', 7.8);
-CALL create_route('Ruta_G', 0.7);
-CALL create_route('Ruta_H', 1.5);
-CALL create_route('Ruta_I', 4.8);
-
-CALL create_zonexroute(1, 1);
-CALL create_zonexroute(1, 2);
-CALL create_zonexroute(1, 3);
-CALL create_zonexroute(2, 4);
-CALL create_zonexroute(2, 5);
-CALL create_zonexroute(2, 6);
-CALL create_zonexroute(3, 7);
-CALL create_zonexroute(3, 8);
-CALL create_zonexroute(3, 9);
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 TABLE: Supplier
 DESCRIPTION: All the supplier that give products to the CorreCaminos company.
@@ -1040,23 +974,6 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- Initial info for Supplier, ProductCategory and ProductSubCategory
-CALL create_supplier('Dos Pinos', 'Avenida central contiguo al estadio', '27030606', 'dospinos@cr.com', 'YES');
-CALL create_supplier('Coca Cola FEMSA', 'Frente al teatro Nacional de San José', '27806924', 'cocacola@cr.com', 'YES');
-CALL create_supplier('Pepsico', 'A la par de mogambos', '27455501', 'pepsico@cr.com', 'NO');
-
-CALL create_prodCat('Granos básicos'); -- 1
-CALL create_prodSubCat('Arroz', 1);
-CALL create_prodSubCat('Frijoles', 1);
-CALL create_prodSubCat('Trigo', 1);
-CALL create_prodCat('Lacteos'); -- 2
-CALL create_prodSubCat('Leche', 2);
-CALL create_prodSubCat('Yogurt', 2);
-CALL create_prodCat('Refresco'); -- 3
-CALL create_prodSubCat('Gaseosa', 3);
-CALL create_prodSubCat('Cerveza', 3);
-CALL create_prodSubCat('Jugo', 3);
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 TABLE: Product
 DESCRIPTION: All the products registered.
@@ -1256,40 +1173,6 @@ BEGIN
 END $$
 
 DELIMITER ;
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- Init values for BusinessStock and Product
-CALL create_product('Leche Entera 1L', 1, 4, 'NO');
-CALL create_product('Leche Deslactosada 1L', 1, 4, 'YES');
-CALL create_product('Yogurt Arandano 250ml', 1, 5, 'YES');
-CALL create_product('Yogurt Fresa 250ml', 1, 5, 'YES');
-CALL create_product('Pilsen TR 250ml', 1, 7, 'YES');
-CALL create_product('Heineken LT 333ml', 1, 7, 'YES');
-CALL create_product('Imperial', 1, 7, 'NO');
-CALL create_product('Coca Cola 355ml', 2, 6, 'YES');
-CALL create_product('Fresca 600ml', 2, 6, 'YES');
-CALL create_product('Arroz Integral 1kg', 3, 1, 'NO');
-CALL create_product('Arroz Precocido 1kg', 3, 1, 'YES');
-CALL create_product('Frijoles Rojos 800g', 3, 2, 'YES');
-CALL create_product('Frijoles Negros 500g', 3, 2, 'YES');
-CALL create_product('Harina Integral 300g', 3, 3, 'YES');
-CALL create_product('Harina Reposteria 300g', 3, 3, 'YES');
-
-CALL reg_prod_bussStock(1, 10000);
-CALL reg_prod_bussStock(2, 500);
-CALL reg_prod_bussStock(3, 8000);
-CALL reg_prod_bussStock(4, 450);
-CALL reg_prod_bussStock(5, 550); 
-CALL reg_prod_bussStock(6, 900); 
-CALL reg_prod_bussStock(7, 1200); 
-CALL reg_prod_bussStock(8, 1650); 
-CALL reg_prod_bussStock(9, 2000); 
-CALL reg_prod_bussStock(10, 900); 
-CALL reg_prod_bussStock(11, 1750); 
-CALL reg_prod_bussStock(12, 2800); 
-CALL reg_prod_bussStock(13, 5000); 
-CALL reg_prod_bussStock(14, 15000); 
-CALL reg_prod_bussStock(15, 200); 
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
@@ -1547,23 +1430,6 @@ END $$
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- Zones: Norte, Central, Sur
--- DI: DAILY, WEEKLY, TWO_PER_WEEK, BIWEEKLY
--- BT: Chino, Supermercado, Gasolinera, Automercado, Restaurante.
-CALL create_client(1, 2, 3, 'Gasolinera A', 'Joaquin Mesa', '85856969', 'joq@mail.com',
-									 'Frente a masxmenos Av 15', 20.6, 67.5);
-CALL create_client(1, 4, 1, 'Chino A', 'Oscar Arias', '83830294', 'oscarin@mail.com',
-									 'Diagonal a la corte', -50.4, 11.56);
-CALL create_client(2, 4, 5, 'Restaurante A', 'Dolores Brenes', '82828282', 'dolor@mail.com',
-									 'A la par del estadio nacional', 56.24, 5.3);
-CALL create_client(2, 1, 5, 'Restaurante B', 'Adriana Rodriguez', '89707070', 'adri@mail.com',
-									 'Continuo a la musmanni', 86.65, 24.7);
-CALL create_client(3, 2, 4, 'Automercado A', 'Martin Caceres', '82009881', 'martin@mail.com',
-									 'Frente al teatrio de bellas artes', -11.64, 10.46);
-CALL create_client(3, 3, 2, 'Supermercado A', 'Alan Mena', '82129456', 'alan@mail.com',
-									 'Diagonal a mogambos', 44.56, -27.2); 
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 TABLE: ClientXDevDay
 Description: Allow to asociate clients with their respectives delivery days.
@@ -1633,13 +1499,6 @@ END $$
 
 DELIMITER ;
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CALL create_clientxdevday(1, 3); -- Delivery on Wednesdays.
-CALL create_clientxdevday(2, 1); -- Delivery on Mondays.
-CALL create_clientxdevday(3, 6); -- Delivery on Saturdays.
-CALL create_clientxdevday(5, 5); -- Delivery on Fridays.
-CALL create_clientxdevday(6, 3); -- Delivery on Wednesdays.
-CALL create_clientxdevday(6, 7); -- and Sundays.
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /*
 Table: ClientOrder
@@ -2038,5 +1897,152 @@ END $$
 
 DELIMITER ;
 
+-- Charset for all tables.
+SELECT CONCAT('ALTER TABLE ', TABLE_NAME, ' CONVERT TO CHARACTER SET utf8 COLLATE utf8_unicode_ci;')
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = 'correcaminosdb' AND TABLE_TYPE != 'VIEW';
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- DATA INSERTION
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_vehicle('Nissan', 'ABC-123', 'Diesel', 50, 40, 300);
+CALL create_vehicle('Toyota', 'XYZ-456', 'Premium', 30, 20, 150);
+CALL create_vehicle('Tesla', 'MMM-111', 'Normal', 100, 96, 0);
+
+UPDATE Vehicle
+SET last_tank_refill = '2022-03-03' WHERE vehicle_id = 3;
+
+CALL create_maint_log(1, 'Frenos averiados');
+CALL create_maint_log(1, 'Cambio de aceite');
+CALL create_maint_log(1, 'Cambio de luces traseras');
+CALL create_maint_log(2, 'Cambio de transmision');
+
+CALL create_job_title('Promotor');
+CALL create_job_title('Repartidor');
+
+CALL create_driver(1, 1, 'Johnny Arias', '788991010', 2000);
+CALL create_driver(2, 2, 'Marcos Rivera', '712345050', 3000);
+CALL create_driver(3, 2, 'Ronny Diaz', '790901234', 3500);
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_dev_day('Monday');
+CALL create_dev_day('Tuesday');
+CALL create_dev_day('Wednesday');
+CALL create_dev_day('Thursday');
+CALL create_dev_day('Friday');
+CALL create_dev_day('Saturday');
+CALL create_dev_day('Sunday');
+
+CALL create_dev_interval('DAILY');
+CALL create_dev_interval('WEEKLY');
+CALL create_dev_interval('TWO_PER_WEEK');
+CALL create_dev_interval('BIWEEKLY');
+
+CALL create_buss_type('Chino');
+CALL create_buss_type('Supermercado');
+CALL create_buss_type('Gasolinera');
+CALL create_buss_type('Automercado');
+CALL create_buss_type('Restaurante');
+
+CALL create_zone('Norte');
+CALL create_zone('Central');
+CALL create_zone('Sur');
+
+CALL create_route('Ruta_A', 13.5);
+CALL create_route('Ruta_B', 2.2);
+CALL create_route('Ruta_C', 10.4);
+CALL create_route('Ruta_D', 15.9);
+CALL create_route('Ruta_E', 6.5);
+CALL create_route('Ruta_F', 7.8);
+CALL create_route('Ruta_G', 0.7);
+CALL create_route('Ruta_H', 1.5);
+CALL create_route('Ruta_I', 4.8);
+
+CALL create_zonexroute(1, 1);
+CALL create_zonexroute(1, 2);
+CALL create_zonexroute(1, 3);
+CALL create_zonexroute(2, 4);
+CALL create_zonexroute(2, 5);
+CALL create_zonexroute(2, 6);
+CALL create_zonexroute(3, 7);
+CALL create_zonexroute(3, 8);
+CALL create_zonexroute(3, 9);
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Initial info for Supplier, ProductCategory and ProductSubCategory
+CALL create_supplier('Dos Pinos', 'Avenida central contiguo al estadio', '27030606', 'dospinos@cr.com', 'YES');
+CALL create_supplier('Coca Cola FEMSA', 'Frente al teatro Nacional de San José', '27806924', 'cocacola@cr.com', 'YES');
+CALL create_supplier('Pepsico', 'A la par de mogambos', '27455501', 'pepsico@cr.com', 'NO');
+
+CALL create_prodCat('Granos básicos'); -- 1
+CALL create_prodSubCat('Arroz', 1);
+CALL create_prodSubCat('Frijoles', 1);
+CALL create_prodSubCat('Trigo', 1);
+CALL create_prodCat('Lacteos'); -- 2
+CALL create_prodSubCat('Leche', 2);
+CALL create_prodSubCat('Yogurt', 2);
+CALL create_prodCat('Refresco'); -- 3
+CALL create_prodSubCat('Gaseosa', 3);
+CALL create_prodSubCat('Cerveza', 3);
+CALL create_prodSubCat('Jugo', 3);
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Init values for BusinessStock and Product
+CALL create_product('Leche Entera 1L', 1, 4, 'NO');
+CALL create_product('Leche Deslactosada 1L', 1, 4, 'YES');
+CALL create_product('Yogurt Arandano 250ml', 1, 5, 'YES');
+CALL create_product('Yogurt Fresa 250ml', 1, 5, 'YES');
+CALL create_product('Pilsen TR 250ml', 1, 7, 'YES');
+CALL create_product('Heineken LT 333ml', 1, 7, 'YES');
+CALL create_product('Imperial', 1, 7, 'NO');
+CALL create_product('Coca Cola 355ml', 2, 6, 'YES');
+CALL create_product('Fresca 600ml', 2, 6, 'YES');
+CALL create_product('Arroz Integral 1kg', 3, 1, 'NO');
+CALL create_product('Arroz Precocido 1kg', 3, 1, 'YES');
+CALL create_product('Frijoles Rojos 800g', 3, 2, 'YES');
+CALL create_product('Frijoles Negros 500g', 3, 2, 'YES');
+CALL create_product('Harina Integral 300g', 3, 3, 'YES');
+CALL create_product('Harina Reposteria 300g', 3, 3, 'YES');
+
+CALL reg_prod_bussStock(1, 10000);
+CALL reg_prod_bussStock(2, 500);
+CALL reg_prod_bussStock(3, 8000);
+CALL reg_prod_bussStock(4, 450);
+CALL reg_prod_bussStock(5, 550); 
+CALL reg_prod_bussStock(6, 900); 
+CALL reg_prod_bussStock(7, 1200); 
+CALL reg_prod_bussStock(8, 1650); 
+CALL reg_prod_bussStock(9, 2000); 
+CALL reg_prod_bussStock(10, 900); 
+CALL reg_prod_bussStock(11, 1750); 
+CALL reg_prod_bussStock(12, 2800); 
+CALL reg_prod_bussStock(13, 5000); 
+CALL reg_prod_bussStock(14, 15000); 
+CALL reg_prod_bussStock(15, 200); 
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Zones: Norte, Central, Sur
+-- DI: DAILY, WEEKLY, TWO_PER_WEEK, BIWEEKLY
+-- BT: Chino, Supermercado, Gasolinera, Automercado, Restaurante.
+CALL create_client(1, 2, 3, 'Gasolinera A', 'Joaquin Mesa', '85856969', 'joq@mail.com',
+									 'Frente a masxmenos Av 15', 20.6, 67.5);
+CALL create_client(1, 4, 1, 'Chino A', 'Oscar Arias', '83830294', 'oscarin@mail.com',
+									 'Diagonal a la corte', -50.4, 11.56);
+CALL create_client(2, 4, 5, 'Restaurante A', 'Dolores Brenes', '82828282', 'dolor@mail.com',
+									 'A la par del estadio nacional', 56.24, 5.3);
+CALL create_client(2, 1, 5, 'Restaurante B', 'Adriana Rodriguez', '89707070', 'adri@mail.com',
+									 'Continuo a la musmanni', 86.65, 24.7);
+CALL create_client(3, 2, 4, 'Automercado A', 'Martin Caceres', '82009881', 'martin@mail.com',
+									 'Frente al teatrio de bellas artes', -11.64, 10.46);
+CALL create_client(3, 3, 2, 'Supermercado A', 'Alan Mena', '82129456', 'alan@mail.com',
+									 'Diagonal a mogambos', 44.56, -27.2); 
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_clientxdevday(1, 3); -- Delivery on Wednesdays.
+CALL create_clientxdevday(2, 1); -- Delivery on Mondays.
+CALL create_clientxdevday(3, 6); -- Delivery on Saturdays.
+CALL create_clientxdevday(5, 5); -- Delivery on Fridays.
+CALL create_clientxdevday(6, 3); -- Delivery on Wednesdays.
+CALL create_clientxdevday(6, 7); -- and Sundays.
+
