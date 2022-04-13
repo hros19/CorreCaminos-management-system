@@ -3,7 +3,6 @@ import HttpStatus from '../config/http.config.js';
 import Response from '../domain/response.js';
 import logger from '../util/logger.js';
 import ZONE_QUERY from '../query/zone.query.js';
-import { ORDER } from 'mysql/lib/PoolSelector';
 
 const ORDER_VALUES = [
   'ASC', 'DESC', 'asc', 'desc'
@@ -105,7 +104,7 @@ export const getPagedZones = (req, res) => {
         }
         // Calculation for pagination parameters
         let numOfResults = results.length;
-        let numOfPages = Math.ceil(nunmOfResults / limit);
+        let numOfPages = Math.ceil(numOfResults / limit);
         if (page > numOfPages) {
           res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Selected page exceeds total page number. The total pages is ${numOfPages} and the page ${page} was requested`));
@@ -229,13 +228,13 @@ export const createRoute = (req, res) => {
   const BODY_PARAMETERS = Object.values(req.body);
   // Checking quantity of parameters
   if (BODY_PARAMETERS.length != 2) {
-    res.status(HttpStatus.BAD_REQUEST.status.code)
+    res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
     return;
   }
   // Checking non empty parameters
   if (BODY_PARAMETERS.includes('', "")) {
-    res.status(HttpStatus.BAD_REQUEST.status.code)
+    res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty parameters are not allowed`));
     return;
   }
@@ -243,26 +242,26 @@ export const createRoute = (req, res) => {
     if (error) {
       console.log(error);
       if (error.errno == 1064) {
-        res.status(HttpStatus.BAD_REQUEST.status.code)
+        res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `${error.errno}: Invalid parameter values, check documentation`));
         return;
       }
       if (error.errno == 1062) {
-        res.status(HttpStatus.BAD_REQUEST.status.code)
+        res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Duplicated values detected, the object was not created`));
         return;
       }
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
       return;
     } else {
       if (!results) {
-        res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
           .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `The vehicle was not registered`));
         return;
       } else {
         const route = results[0][0];
-        res.status(HttpStatus.CREATED.status.code)
+        res.status(HttpStatus.CREATED.code)
           .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Route registered sucessfully`, { route }));
         return;
       }
@@ -272,18 +271,18 @@ export const createRoute = (req, res) => {
 
 export const getRoute = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, retrieving route...`);
-  database.query(ZONE_QUERY.SELECT_ROUTE, [req.params.id], (error, results) => {
+  database.query(ZONE_QUERY.SELECT_ROUTE, [req.params.route_id], (error, results) => {
     if (error) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
       return;
     } else {
       if (!results[0]) {
-        res.status(HttpStatus.NOT_FOUND.status.code)
-          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with id ${req.params.id} was not found`));
+        res.status(HttpStatus.NOT_FOUND.code)
+          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with id ${req.params.route_id} was not found`));
         return;
       } else {
-        res.status(HttpStatus.OK.status.code)
+        res.status(HttpStatus.OK.code)
           .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Route found`, results[0]));
         return;
       }
@@ -297,26 +296,26 @@ export const getPagedRoutes = (req, res) => {
   const order = req.param('order') || 'DESC';
   // Validation of pagination parameters
   if (!ORDER_VALUES.includes(order) || !PARAMETER_ROUTE_VALUES.includes(parameter)) {
-    res.status(HttpStatus.BAD_REQUEST.status.code)
+    res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameters for pagination order (check 'parameter' and 'order' values)`));
     return;
   }
   database.query(ZONE_QUERY.SELECT_ROUTES, (error, results) => {
     if (error) {
       console.log(error);
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
       return;
     } else {
       if (!results[0]) {
-        res.status(HttpStatus.NOT_FOUND.status.code)
+        res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No routes found`));
       } else {
         const page = req.param('pag') ? Number(req.param('pag')) : 1;
         const limit = req.para('limit') ? Number(req.param('limit')) : 1;
         // Validation parameters
         if (isNaN(page) || isNaN(limit)) {
-          res.status(HttpStatus.BAD_REQUEST.status.code)
+          res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
           return;
         }
@@ -324,12 +323,12 @@ export const getPagedRoutes = (req, res) => {
         let numOfResults = results.length;
         let numOfPages = Math.ceil(numOfResults / limit);
         if (page > numOfPages) {
-          res.status(HttpStatus.BAD_REQUEST.status.code)
+          res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Selected page exceeds total pages. The total pages is ${numOfPages} and the page ${page} was requested`));
           return;
         }
         if (page < 1) {
-          res.status(HttpStatus.BAD_REQUEST.status.code)
+          res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page requested (${page}), must be 1 or higher`));
           return;
         }
@@ -338,15 +337,15 @@ export const getPagedRoutes = (req, res) => {
         database.query(ZONE_QUERY.SELECT_PAGED_ROUTES, [parameter, order, startingLimit, limit], (error, results) => {
           if (error) {
             console.log(error);
-              res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+              res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
             return;
           } else {
             if (!results[0]) {
-              res.status(HttpStatus.NOT_FOUND.status.code)
+              res.status(HttpStatus.NOT_FOUND.code)
                 .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No routes found`));
             } else {
-              res.status(HttpStatus.OK.status.code)
+              res.status(HttpStatus.OK.code)
               .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, { data: results[0], page, numOfPages }));
             }
           }
@@ -361,25 +360,25 @@ export const updateRoute = (req, res) => {
   const BODY_PARAMETERS = Object.values(req.body);
   // Checking quantity of parameters
   if (BODY_PARAMETERS.length != 2) {
-    res.status(HttpStatus.BAD_REQUEST.status.code)
+    res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
     return;
   }
   // Checking empty parameters
   if (BODY_PARAMETERS.includes('', "")) {
-    res.status(HttpStatus.BAD_REQUEST.status.code)
+    res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty parameters are not allowed`));
     return;
   }
   database.query(ZONE_QUERY.SELECT_ROUTE, [req.params.route_id], (error, results) => {
     if (error) {
       console.log(error);
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
       return;
     } else {
       if (!results[0]) {
-        res.status(HttpStatus.NOT_FOUND.status.code)
+        res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with the id ${req.params.route_id} was not found`));
         return;
       } else {
@@ -387,20 +386,20 @@ export const updateRoute = (req, res) => {
           if (error) {
             console.log(error);
             if (error.errno == 1064) {
-              res.status(HttpStatus.BAD_REQUEST.status.code)
+              res.status(HttpStatus.BAD_REQUEST.code)
                 .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameter values, check documentation`));
               return;
             }
             if (error.errno == 1062) {
-              res.status(HttpStatus.BAD_REQUEST.status.code)
+              res.status(HttpStatus.BAD_REQUEST.code)
                 .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Duplicated values detected, the object was not created`));
               return;
             }
-            res.status(HttpStatus.INTERNAL_SERVER_ERROR.status.code)
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
             return;
           } else {
-            res.status(HttpStatus.OK.status.code)
+            res.status(HttpStatus.OK.code)
               .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Route updated successfully`, { id: req.params.route_id, ...req.body }));
             return;
           }
@@ -508,6 +507,7 @@ export const getPagedZoneRoutes = (req, res) => {
   }
   database.query(ZONE_QUERY.SELECT_ZONE_ROUTES, [req.params.id], (error, results) => {
     if (error) {
+      console.log(error);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
     } else {
