@@ -760,14 +760,30 @@ END $$
 PROCEDURE: getp_zone_routes
 DESCRIPTION: Get all the zone and routes with pagination parameters.
 */
-CREATE PROCEDURE getp_zone_routes(IN pZoneId INT, IN pOrder VARCHAR(255),
+CREATE PROCEDURE getp_zone_routes(IN pZoneId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255),
 																	IN pStart INT, IN pElemPerPage INT)
 BEGIN
-  SELECT Route.route_id, Route.route_name FROM Zone
-  INNER JOIN ZoneXRoute ON ZoneXRoute.zone_id = 1
-  INNER JOIN Route ON ZoneXRoute.route_id = Route.route_id
-  WHERE Zone.zone_id = 1
-  LIMIT pStart, pElemPerPage;
+	DECLARE strQuery VARCHAR(350);
+  SET @strQuery = CONCAT('SELECT rt.route_id, rt.route_name FROM Zone zn ',
+												 'INNER JOIN ZoneXRoute zxr ON zxr.zone_id = ', pZoneId, ' ',
+												 'INNER JOIN Route rt ON zxr.route_id = rt.route_id ',
+												 'WHERE zn.zone_id = ', pZoneId, ' ',
+												 'ORDER BY ', pParameter, ' ' pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE get_zone_routes
+DESCRIPTION: Retrieve all the routes of an specific zone.
+*/
+CREATE PROCEDURE get_zone_routes(IN pZoneId INT)
+BEGIN
+	SELECT Route.route_id, Route.route_name FROM Zone zn
+	INNER JOIN ZoneXRoute zxr ON zxr.zone_id = pZoneId
+	INNER JOIN Route ON zxr.route.route_id = Route.route_id
+	WHERE zn.zone_id = pZoneId;
 END $$
 
 DELIMITER ;
