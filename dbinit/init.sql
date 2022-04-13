@@ -768,7 +768,7 @@ BEGIN
 												 'INNER JOIN ZoneXRoute zxr ON zxr.zone_id = ', pZoneId, ' ',
 												 'INNER JOIN Route rt ON zxr.route_id = rt.route_id ',
 												 'WHERE zn.zone_id = ', pZoneId, ' ',
-												 'ORDER BY ', pParameter, ' ' pOrder, ' ', 
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
 												 'LIMIT ', pStart, ', ', pElemPerPage);
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
@@ -782,7 +782,7 @@ CREATE PROCEDURE get_zone_routes(IN pZoneId INT)
 BEGIN
 	SELECT Route.route_id, Route.route_name FROM Zone zn
 	INNER JOIN ZoneXRoute zxr ON zxr.zone_id = pZoneId
-	INNER JOIN Route ON zxr.route.route_id = Route.route_id
+	INNER JOIN Route ON zxr.route_id = Route.route_id
 	WHERE zn.zone_id = pZoneId;
 END $$
 
