@@ -13,7 +13,8 @@ const VEHICLE_QUERY = {
   UPDATE_MAINTENANCELOG: 'CALL upd_maint_log(?, ?)',
   GETP_MAINTENANCELOGS_OF_VEHICLE: 'CALL getp_veh_maint_logs(?, ?, ?)', // sets
   GET_MAINTENANCELOGS_OF_VEHICLE: 'CALL get_veh_maint_logs(?)',
-  SELECT_MAINTENANCELOG: 'SELECT * FROM MaintenanceLog WHERE maintenance_id = ?'
+  SELECT_MAINTENANCELOG: 'SELECT * FROM MaintenanceLog WHERE maintenance_id = ?',
+  DELETE_MAINTENANCELOG: 'DELETE FROM MaintenanceLog WHERE maintenance_id = ?'
 };
 
 export default VEHICLE_QUERY;
