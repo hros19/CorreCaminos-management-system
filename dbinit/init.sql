@@ -9,6 +9,7 @@ CREATE DATABASE IF NOT EXISTS correcaminosdb;
 USE correcaminosdb;
 SET GLOBAL sql_mode='';
 SET GLOBAL event_scheduler = ON;
+ALTER DATABASE correcaminosdb CHARACTER SET utf8mb4;
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- XXVEHICLE
 /*
@@ -259,7 +260,7 @@ END $$
 
 CREATE PROCEDURE get_veh_maint_logs(IN pVehicleId INT)
 BEGIN
-	SELECT v.vehicle_id, mn.maintenance_type, mn.maintenance_date FROM vehicle v
+	SELECT v.vehicle_id, mn.maintenance_type, mn.maintenance_date FROM Vehicle v
 	INNER JOIN MaintenanceLog mn
 	ON v.vehicle_id = mn.vehicle_id
 	WHERE v.vehicle_id = pVehicleId;
