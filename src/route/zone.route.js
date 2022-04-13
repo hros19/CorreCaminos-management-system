@@ -1,5 +1,5 @@
 import express from 'express';
-import { createZone, getZone, getPagedZones, updateZone, deleteZone } from '../controller/zone.controler.js';
+import { createZone, getZone, getPagedZones, updateZone, deleteZone } from '../controller/zone.controller.js';
 import { createRoute, getRoute, getPagedRoutes, updateRoute, deleteRoute } from '../controller/zone.controller.js';
 import { createZoneXRoute, getPagedZoneRoutes, deleteZoneXRoute } from '../controller/zone.controller.js';
 
