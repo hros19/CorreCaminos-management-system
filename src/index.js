@@ -8,6 +8,7 @@ import HttpStatus from './config/http.config.js';
 import vehicleRoutes from './route/vehicle.route.js';
 import jobtitleRoutes from './route/jobtitle.route.js';
 import driverRoutes from './route/driver.route.js';
+import businesstypeRoute from './route/businesstype.route.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/vehicle', vehicleRoutes);
 app.use('/jobtitle', jobtitleRoutes);
 app.use('/driver', driverRoutes);
+app.use('/businesstype', businesstypeRoute);
 app.all('*', (req, res) => {
   res.status(HttpStatus.NOT_FOUND.code)
     .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The resource ${req.originalUrl} was not found`));
