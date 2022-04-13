@@ -682,11 +682,11 @@ END $$
 PROCEDURE: getp_routes
 DESCRIPTION: Get all the routes with pagination parameters.
 */
-CREATE PROCEDURE getp_routes(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+CREATE PROCEDURE getp_routes(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
   SET @strQuery = CONCAT('SELECT * FROM Route ',
-												 'ORDER BY route_name ', pOrder, ' ', 
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
 												 'LIMIT ', pStart, ', ', pElemPerPage);
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
