@@ -293,30 +293,29 @@ export const registerKilometers = (req, res) => {
 export const updateMaintenenaceLog = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, updating maintenance log...`);
   const status = req.param('status');
-  const maintenance_id = req.param('maintenance_id');
   // Check if the parameter was passed by the user
-  if (isNaN(status) || isNaN(maintenance_id)) {
+  if (isNaN(status)) {
     res.staatus(HttpStatus.BAD_REQUEST.code)
-      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Obligatory parameters were not found (maintenance_id, status) are required`));
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Obligatory parameters were not found (status) is required`));
     return;
   }
   // Check if the status is valid
-  if (status == '' || maintenance_id == '') {
+  if (status == '') {
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty values for parameters are not allowed`));
     return;
   }
   // Valid parameter, search the maintenance log
-  database.query(VEHICLE_QUERY.SELECT_MAINTENANCELOG, [maintenance_id], (error, results) => {
+  database.query(VEHICLE_QUERY.SELECT_MAINTENANCELOG, [req.params.id], (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
-        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status), `The maintenance log with id ${maintenance_id} was not found`);
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status), `The maintenance log with id ${req.params.id} was not found`);
     } else {
       // Existing maintenance log, then update.
-      database.query(VEHICLE_QUERY.UPDATE_MAINTENANCELOG, [maintenance_id, status], (error, results) => {
+      database.query(VEHICLE_QUERY.UPDATE_MAINTENANCELOG, [req.params.id, status], (error, results) => {
         if (affectedRows > 0) {
           res.status(HttpStatus.OK.code)
-            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log updated sucessfully`, { id: maintenance_id, new_status: status }));
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log updated sucessfully`, { id: req.params.id, new_status: status }));
         } else {
           res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
             .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
@@ -330,12 +329,12 @@ export const getMaintenanceLogsOfVehicle = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, getting maintenance logs of a vehicle...`);
   // Search if exists maintenance logs asociated to that vehicle
   database.query(VEHICLE_QUERY.GET_MAINTENANCELOGS_OF_VEHICLE, [req.params.id], (error, results) => {
-    if (!results[0]) {
+    if (!results[0][0]) {
       res.status(HttpStatus.NOT_FOUND.code)
         .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance logs were found for the vehicle with id ${req.params.id}`));
     } else {
       const page = req.param('pag') ? Number(req.param('pag')) : 1;
-      const limit = req.param('limit') ? Number(req.param('limit')) : 10;
+      const limit = req.param('limit') ? Number(req.param('limit')) : 1;
       // Validation page parameters
       if (isNaN(page) || isNaN(limit)) {
         res.status(HttpStatus.BAD_REQUEST.code)
@@ -344,7 +343,7 @@ export const getMaintenanceLogsOfVehicle = (req, res) => {
         return;
       }
       // Calculation for paginations parameters...
-      let numOfResults = results.length;
+      let numOfResults = results[0].length;
       let numOfPages = Math.ceil(numOfResults / limit);
       if (page > numOfPages) {
         res.status(HttpStatus.BAD_REQUEST.code)
@@ -364,7 +363,42 @@ export const getMaintenanceLogsOfVehicle = (req, res) => {
             .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
         } else {
           res.status(HttpStatus.OK.code)
-            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance logs of vehicle with id ${req.params.id} retrived`, { data: results[0], page, numOfPages }));
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance logs of vehicle with id ${req.params.id} retrieved`, { data: results[0], page, numOfPages }));
+        }
+      });
+    }
+  });
+};
+
+export const getMaintenanceLog = (req, res) => {
+  logger.info(`${req.method} ${req.originalUrl}, getting maintenance log...`);
+  database.query(VEHICLE_QUERY.SELECT_MAINTENANCELOG, [req.params.id], (error, results) => {
+    if (!results[0]) {
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance log with id  ${req.params.id} was not found`));
+    } else {
+      res.status(HttpStatus.OK.code)
+        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log with id ${req.params.id} was founded`, results[0]));
+    }
+  });
+};
+
+export const deleteMaintenanceLog = (req, res) => {
+  logger.info(`${req.method} ${req.originalUrl}, removing maintenance log...`);
+  // Search for the maintenance log...
+  database.query(VEHICLE_QUERY.SELECT_MAINTENANCELOG, [req.params.id], (error, results) => {
+    if (!results[0]) {
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance log with id  ${req.params.id} was not found`));
+    } else {
+      database.query(VEHICLE_QUERY.DELETE_MAINTENANCELOG, [req.params.id], (error, results) => {
+        if (results.affectedRows > 0) {
+          res.status(HttpStatus.OK.code)
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `The maintenance log with id ${req.params.id} was deleted sucessfully`));
+        } else {
+          console.log(error);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+            .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
         }
       });
     }
@@ -399,8 +433,8 @@ export const registerMaintenanceLog = (req, res) => {
           res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
             .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
         } else {
-          res.status(HttpStatus.OK.code)
-            .send(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log registered sucessfully for the vehicle with id ${req.params.id}`, results[0]);
+          res.status(HttpStatus.CREATED.code)
+            .send(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Maintenance log registered sucessfully for the vehicle with id ${req.params.id}`, results[0]);
         }
       });
     }
