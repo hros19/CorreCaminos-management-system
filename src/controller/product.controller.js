@@ -274,9 +274,15 @@ export const deleteProduct = (req, res) => {
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error deleting product'));
             return;
           } else {
-            logger.info(`${req.method} - ${req.originalUrl}, product deleted`);
-            res.status(HttpStatus.OK.code)
-              .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Product deleted'));
+            if (results.affectedRows > 0) {
+              logger.info(`${req.method} - ${req.originalUrl}, product deleted`);
+              res.status(HttpStatus.OK.code)
+                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Product deleted'));
+            } else {
+              logger.error(`${req.method} - ${req.originalUrl}, product not deleted`);
+              res.status(HttpStatus.NOT_FOUND.code)
+                .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Product not deleted'));
+            }
           }
         });
       }
