@@ -1089,6 +1089,23 @@ BEGIN
   EXECUTE myQuery;	
 END $$
 
+/*
+PROCEDURE: get_product
+DESCRIPTION: Get a product by an specific supplier without pagination.
+*/
+CREATE PROCEDURE get_sup_products(IN pSupplierId INT)
+BEGIN
+  DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT prod.product_id, prod.product_name, psc.product_subcat_id, ', 
+                         'psc.product_subcat_name, sup.supplier_id, sup.supplier_name, prod.is_available ',
+                         'FROM Product prod ',
+                         'INNER JOIN Supplier sup ON sup.supplier_id = prod.supplier_id ',
+                         'INNER JOIN ProductSubCategory psc ON psc.product_subcat_id = prod.product_subcat_id ',
+                         'WHERE prod.supplier_id = ', pSupplierId);
+  PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
 DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
