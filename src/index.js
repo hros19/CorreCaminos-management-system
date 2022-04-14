@@ -11,6 +11,7 @@ import driverRoutes from './route/driver.route.js';
 import businesstypeRoute from './route/businesstype.route.js';
 import supplierRoutes from './route/supplier.route.js';
 import zoneRoutes from './route/zone.route.js';
+import productcategoryRoutes from './route/productcategory.route.js';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use('/driver', driverRoutes);
 app.use('/businesstype', businesstypeRoute);
 app.use('/zone', zoneRoutes);
 app.use('/supplier', supplierRoutes);
+app.use('/productcategory', productcategoryRoutes);
 app.all('*', (req, res) => {
   res.status(HttpStatus.NOT_FOUND.code)
     .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The resource ${req.originalUrl} was not found`));
