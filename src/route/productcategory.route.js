@@ -1,5 +1,5 @@
 import express from 'express';
-import { createProductCategory, getPagedProductCategories, getProductCategory, updateProductCategory, deleteProductCategory } from '../controller/productcategory.controller';
+import { createProductCategory, getPagedProductCategories, getProductCategory, updateProductCategory, deleteProductCategory } from '../controller/productcategory.controller.js';
 import { createProductSubCat, getProductSubCategory, getPagedProductSubCats, updateProductSubCat, deleteProductSubCat  } from '../controller/productcategory.controller.js';
 
 const productCategoryRoutes = express.Router();
