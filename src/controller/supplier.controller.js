@@ -115,20 +115,30 @@ export const updateSupplier = (req, res) => {
 export const deleteSupplier = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, deleting supplier...`);
   const supplier_id = req.params.supplier_id;
-  database.query(SUPPLIER_QUERY.DELETE_SUPPLIER, [supplier_id], (error, results) => {
+  // Valid if the supplier exists
+  database.query(SUPPLIER_QUERY.SELECT_SUPPLIER, supplier_id, (error, results) => {
     if (error) {
-      logger.error(`${req.method} - ${req.originalUrl}, error deleting supplier: ${error}`);
+      logger.error(`${req.method} - ${req.originalUrl}, error searching supplier: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
     } else {
-      if (results.affectedRows > 0) {
-        logger.info(`${req.method} - ${req.originalUrl}, supplier deleted successfully`);
-        res.status(HttpStatus.OK.code)
-          .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Supplier deleted successfully'));
-      } else {
-        logger.info(`${req.method} - ${req.originalUrl}, supplier not found`);
+      if (!results[0]) {
+        logger.error(`${req.method} - ${req.originalUrl}, supplier not found`);
         res.status(HttpStatus.NOT_FOUND.code)
-          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Supplier not found'));
+          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Supplier with id ${supplier_id} was not found`));
+      } else {
+        // Deleting the supplier...
+        database.query(SUPPLIER_QUERY.DELETE_SUPPLIER, supplier_id, (error, results) => {
+          if (error) {
+            logger.error(`${req.method} - ${req.originalUrl}, error deleting supplier: ${error}`);
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+              .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
+          } else {
+            logger.info(`${req.method} - ${req.originalUrl}, supplier deleted sucessfully`);
+            res.status(HttpStatus.OK.code)
+              .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Supplier ${supplier_id} deleted sucessfully`));
+          }
+        });
       }
     }
   });
