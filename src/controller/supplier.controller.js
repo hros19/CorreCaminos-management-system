@@ -4,15 +4,6 @@ import Response from '../domain/response.js';
 import logger from '../util/logger.js';
 import SUPPLIER_QUERY from '../query/supplier.query.js';
 
-/*
-CREATE_SUPPLIER: 'CALL create_supplier(?, ?, ?, ?, ?)',
-  UPDATE_SUPPLIER: 'CALL upd_supplier(?, ?, ?, ?, ?, ?)',
-  DELETE_SUPPLIER: 'DELETE FROM Supplier WHERE id = ?',
-  SELECT_SUPPLIER: 'SELECT * FROM Supplier WHERE id = ?',
-  SELECT_SUPPLIERS: 'SELECT * FROM Supplier',
-  SELECT_PAGED_SUPPLIERS: 'CALL getp_suppliers(?, ?, ?, ?)'
-*/
-
 const PARAMETER_VALUES = [
   'supplier_id', 'supplier_name', 'formal_address', 'phone_number',
   'email', 'have_delivery'
