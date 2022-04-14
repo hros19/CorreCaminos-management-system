@@ -61,7 +61,8 @@ export const unregProductInStock = (req, res) => {
         return;
       } else {
         // Product found in stock, then unregister some amount of products
-        console.log(results[0]);
+        const product_quantity = results[0].quantity;
+        // Check if the amount overpass the product quantity
       }
     }
   });
