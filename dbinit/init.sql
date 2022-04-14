@@ -889,11 +889,11 @@ END $$
 PROCEDURE: getp_prodCategories
 DESCRIPTION: Return all the product categories with pagination parameters.
 */
-CREATE PROCEDURE getp_prodCategories(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+CREATE PROCEDURE getp_prodCategories(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
   SET @strQuery = CONCAT('SELECT * FROM ProductCategory ',
-												 'ORDER BY product_cat_name ', pOrder, ' ', 
+												 'ORDER BY ', pParameter, ' ', pOrder, ' ', 
 												 'LIMIT ', pStart, ', ', pElemPerPage);
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
