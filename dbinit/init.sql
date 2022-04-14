@@ -1090,7 +1090,7 @@ BEGIN
 END $$
 
 /*
-PROCEDURE: get_product
+PROCEDURE: get_sup_products
 DESCRIPTION: Get a product by an specific supplier without pagination.
 */
 CREATE PROCEDURE get_sup_products(IN pSupplierId INT)
@@ -1253,6 +1253,34 @@ BEGIN
 										ORDER BY order_date DESC LIMIT 0, 1);
 	return last_order;
 END$$
+
+/*
+PROCEDURE: get_ordersBySup
+DESCRIPTION: Get all the orders made by a specific supplier without pagination parameters
+*/
+CREATE PROCEDURE get_ordersBySup(IN pSupplierId INT)
+BEGIN
+  DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM SupplierOrder ',
+                         'WHERE supplier_id = ', pSupplierId);
+  PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE: getp_ordersBySup
+DESCRIPTION: Get all the orders by a specific supplier with pagination parameters.
+*/
+CREATE PROCEDURE getp_ordersBySup(IN pSupplierId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+  DECLARE strQuery VARCHAR(255);
+  SET @strQuery = CONCAT('SELECT * FROM SupplierOrder ',
+                         'WHERE supplier_id = ', pSupplierId, ' ',
+                         'ORDER BY ', pParameter, ' ', pOrder, ' ', 
+                         'LIMIT ', pStart, ', ', pElemPerPage);
+  PREPARE myQuery FROM @strQuery;
+  EXECUTE myQuery;
+END $$
 
 /*
 PROCEDURE: create_supOrder
