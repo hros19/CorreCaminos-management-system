@@ -22,12 +22,12 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 app.use('/vehicle', vehicleRoutes);
-app.use('/jobtitle', jobtitleRoutes);
+app.use('/jobTitle', jobtitleRoutes);
 app.use('/driver', driverRoutes);
-app.use('/businesstype', businesstypeRoute);
+app.use('/businessType', businesstypeRoute);
 app.use('/zone', zoneRoutes);
 app.use('/supplier', supplierRoutes);
-app.use('/productcategory', productcategoryRoutes);
+app.use('/productCat', productcategoryRoutes);
 app.all('*', (req, res) => {
   res.status(HttpStatus.NOT_FOUND.code)
     .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The resource ${req.originalUrl} was not found`));
