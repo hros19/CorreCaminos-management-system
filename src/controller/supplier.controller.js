@@ -26,7 +26,7 @@ export const createSupplier = (req, res) => {
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameters, empty values are not allowed'));
     return;
   }
-  database.query(SUPPLIER_QUERY, BODY_PARAMETERS, (error, results) => {
+  database.query(SUPPLIER_QUERY.CREATE_SUPPLIER, BODY_PARAMETERS, (error, results) => {
     if (error) {
       if (error.errno == 1064) {
         logger.error(`${req.originalUrl} - ${req.method}, invalid parameters, check documentation`);
