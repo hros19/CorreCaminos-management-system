@@ -1305,7 +1305,7 @@ BEGIN
 			INSERT INTO SupplierOrder (supplier_id)
       VALUES (pSupplierId);
       SET @ID = LAST_INSERT_ID();
-      SELECT @ID;
+      SELECT @ID AS ID;
     END IF;
   END IF;
 END $$
