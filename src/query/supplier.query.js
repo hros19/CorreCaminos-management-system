@@ -13,6 +13,8 @@ const SUPPLIER_QUERY = {
   SELECT_ORDERS_BY_SUP: 'CALL get_ordersBySup(?)',
   GET_LAST_ORDER_OF_SUP: 'SELECT getd_lastOrderSup(?) AS lastOrder',
   SELECT_SUPPLIER_ORDER: 'SELECT * FROM SupplierOrder WHERE supplier_order_id = ?',
+  // Supplier Order Detail query
+  CREATE_SUPPLIER_ORD_DETAIL: 'CALL create_supOrdDet(?, ?, ?)'
 };
 
 export default SUPPLIER_QUERY;
