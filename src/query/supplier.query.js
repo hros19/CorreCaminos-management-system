@@ -11,7 +11,7 @@ const SUPPLIER_QUERY = {
   CREATE_SUPPLIER_ORD: 'CALL create_supOrder(?)',
   SELECT_PAGED_ORDERS_BY_SUP: 'CALL getp_ordersBySup(?, ?, ?, ?, ?)',
   SELECT_ORDERS_BY_SUP: 'CALL get_ordersBySup(?)',
-  GET_LAST_ORDER_OF_SUP: 'SELECT getd_lastOrderOfSup(?) AS lastOrder',
+  GET_LAST_ORDER_OF_SUP: 'SELECT getd_lastOrderSup(?) AS lastOrder',
   SELECT_SUPPLIER_ORDER: 'SELECT * FROM SupplierOrder WHERE supplier_order_id = ?',
 };
 
