@@ -60,8 +60,8 @@ export const fillProductsInStock = async (req, res) => {
         .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The quantity ${product.quantity} is not valid`));
       return;
     }
-    // Check for every 'product_id' parameter if is an existing product
-    let result = await existsProductInStock(product.product_id);
+    // Check for every 'product_id' parameter if is an existing product in stock
+    let result = await getProductInStock(product.product_id);
     if (result.length == 0) {
       logger.error(`${req.method} - ${req.originalUrl}, the product ${product.product_id} does not exist in the stock`);
       res.status(HttpStatus.BAD_REQUEST.code)
@@ -70,14 +70,165 @@ export const fillProductsInStock = async (req, res) => {
     }
     productsInStock.push(result[0]);
   }
-  // All valid products, try to fill them in the stock
+  // All the products are in stock, then retrieve the main information of the product
+  let productRows = [];
   for (let i in productsInStock) {
-    console.log(productsInStock[i]);
+    const product_id = productsInStock[i].product_id;
+    let result = await getProduct(product_id);
+    if (result.length == 0) {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${product_id} does not exist`);
+      res.status(HttpStatus.BAD_REQUEST.code)
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${product_id} does not exist`));
+      return;
+    }
+    // Check if the product is available
+    if (result[0].is_available == 'NO') {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${product_id} is not available`);
+      res.status(HttpStatus.BAD_REQUEST.code)
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${product_id} is not available`));
+      return;
+    }
+    // Check the last order of the supplier by the product
+    let supplier_id = result[0].supplier_id;
+    let results = await getLastOrderOfSup(supplier_id);
+    // If result is null, indicates that there are not orders of the supplier registered
+    let lastOrderObject = results[0].lastOrder;
+    if (lastOrderObject != null) {
+      let actualDate = new Date();
+      let lastOrderDate = new Date(lastOrderObject);
+      // Check if the last order is older than 7 days
+      let dayBetweenLastOrder = (actualDate.getTime() - lastOrderDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (dayBetweenLastOrder < 8) {
+        logger.error(`${req.method} - ${req.originalUrl}, a new order of the product ${product_id} can not be registered because the last order was registered less than 7 days ago`);
+        res.status(HttpStatus.BAD_REQUEST.code)
+          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `A new order of the product ${product_id} can not be registered because the last order was registered less than 7 days ago`));
+        return;
+      }
+    }
+    /* Everything seems ok, then we need to add those products to a new list.
+    The difference between productRows and productsInStock is that 'productInStock' 
+    objets are just a register from the business stock, the 'productRows' 
+    objects are the main information of the product that is contained in 'Product' table.*/
+    productRows.push(result[0]);
   }
+  // At this point, all the products are available. The we need to open a SupplierOrder and then register the products
+  let supplierOrderIds = [];
+  for (let i in productRows) {
+    const product = productRows[i];
+    const supplier_id = product.supplier_id;
+    const result = await openSupplierOrder(supplier_id);
+    if (result[0].length == 0) {
+      // This might be a fatal error
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `The order for the supplier ${supplier_id} could not be opened, fatal error`));
+      return;
+    }
+    // If a value is duplicated, doesnt matter. The last one will be used
+    if (result[0] != 'duplicate') {
+      supplierOrderIds.push(result[0][0].ID);
+    }
+  }
+  // Get the respective supplier orders
+  let supplierOrders = [];
+  for (let i in supplierOrderIds) {
+    const supplierOrderId = supplierOrderIds[i];
+    let result = await getSupplierOrder(supplierOrderId);
+    if (result[0].length == 0) {
+      // This might be a fatal error
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `The supplier order ${supplierOrderId} could not be retrieved, fatal error`));
+      return;
+    }
+    supplierOrders.push(result[0]);
+  }
+  // For each supplier order, we register the details for each product
+  for (let i in supplierOrders) {
+    for (let j in productRows) {
+      const supplierOrder = supplierOrders[i];
+      const product = productRows[j];
+      const quantity = products[j].quantity;
+      if (supplierOrder.supplier_id == product.supplier_id) {
+        // Register the supplier order detail
+        let result = await createSupplierOrderDetail(supplierOrder.supplier_order_id, product.product_id, quantity);
+        if (result.affectedRows > 0) {
+          continue;
+        } else {
+          // This might be a fatal error
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+            .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `The supplier order detail ${supplierOrder.supplier_order_id} for the product ${product.product_id} could not be registered, fatal error`));
+          return;
+        }
+      }
+    }
+  }
+  // All products registered!
+  res.status(HttpStatus.OK.code)
+    .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `The products were registered successfully`));
 };
 
-let existsProductInStock = async (productId) => {
-  let results = await new Promise((resolve, reject) => database.query(PRODUCT_QUERY.SELECT_PRODUCT, [productId], (err, results) => {
+let createSupplierOrderDetail = async(supplierOrderId, productId, quantity) => {
+  let result = await new Promise((resolve, reject) => database.query(SUPPLIER_QUERY.CREATE_SUPPLIER_ORD_DETAIL, [supplierOrderId, productId, quantity], (err, result) => {
+    if (err) {
+      reject(err);
+    } else {
+      resolve(result);
+    }
+  }));
+  return result;
+};
+
+let getSupplierOrder = async (supplierOrderId) => {
+  let result = await new Promise((resolve, reject) => database.query(SUPPLIER_QUERY.SELECT_SUPPLIER_ORDER, [supplierOrderId], (err, result) => {
+    if (err) {
+      reject(err);
+    } else {
+      resolve(result);
+    }
+  }));
+  return result;
+};
+
+let openSupplierOrder = async (supplier_id) => {
+  let result = await new Promise((resolve, reject) => database.query(SUPPLIER_QUERY.CREATE_SUPPLIER_ORD, [supplier_id], (err, result) => {
+    if (err) {
+      if (err.errno == 1062) {
+        resolve(["duplicate"]);
+      } else {
+        reject(err);
+      }
+    } else {
+      resolve(result);
+    }
+  }));
+  return result;
+};
+
+let getLastOrderOfSup = async(supplier_id) => {
+  let result = await new Promise((resolve, reject) => database.query(SUPPLIER_QUERY.GET_LAST_ORDER_OF_SUP, [supplier_id], (err, result) => {
+    if (err) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting last order of supplier ${supplier_id}: ${err}`);
+      reject(err);
+    } else {
+      resolve(result);
+    }
+  }));
+  return result;
+};
+
+let getProduct = async (productId) => {
+  let result = await new Promise((resolve, reject) => database.query(PRODUCT_QUERY.SELECT_PRODUCT, [productId], (err, result) => {
+    if (err) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting product: ${err}`);
+      reject(err);
+    } else {
+      resolve(result);
+    }
+  }));
+  return result;
+};
+
+let getProductInStock = async (productId) => {
+  let results = await new Promise((resolve, reject) => database.query(BUSINESSSTOCK_QUERY.SELECT_PRODUCT_IN_STOCK, [productId], (err, results) => {
     if (err) {
       logger.error(`${req.method} - ${req.originalUrl}, error getting product: ${err}`);
       reject(err);
