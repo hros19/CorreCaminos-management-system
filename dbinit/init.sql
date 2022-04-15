@@ -1289,25 +1289,10 @@ SupplierOrder just created.
 */
 CREATE PROCEDURE create_supOrder(IN pSupplierId INT)
 BEGIN
-	SET @qty_orders = getq_ordersBySup(pSupplierId);
-  IF (@qty_orders = 0) THEN
-		INSERT INTO SupplierOrder (supplier_id)
-    VALUES (pSupplierId);
-    SET @ID = LAST_INSERT_ID();
-    SELECT @ID;
-	ELSE
-		SET @last_order := getd_lastOrderSup(pSupplierId);
-    IF (DATEDIFF(CURRENT_DATE, @last_order) <= 7) THEN
-			SIGNAL SQLSTATE '23000'
-      SET MESSAGE_TEXT = 'No more than 1 order by week for each supplier',
-      MYSQL_ERRNO = 1000;
-		ELSE
-			INSERT INTO SupplierOrder (supplier_id)
-      VALUES (pSupplierId);
-      SET @ID = LAST_INSERT_ID();
-      SELECT @ID AS ID;
-    END IF;
-  END IF;
+	INSERT INTO SupplierOrder (supplier_id)
+  VALUES (pSupplierId);
+  SET @ID = LAST_INSERT_ID();
+  SELECT @ID AS ID;
 END $$
 
 DELIMITER ;
