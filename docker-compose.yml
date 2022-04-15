@@ -27,7 +27,7 @@ services:
     build: .
     image: nodeapp:v1
     volumes:
-      - $HOME/nodeapp:/code
+      - ./:/usr/code
     ports:
       - 3000:3000
     environment:
