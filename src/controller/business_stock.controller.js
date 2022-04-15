@@ -15,6 +15,74 @@ SELECT_PAGED_PRODUCTS_IN_STOCK: 'CALL getp_businessStock(?, ?, ?, ?)',
   DELETE_PRODUCT_IN_STOCK: 'DELETE FROM BusinessStock WHERE product_id = ?'
 */
 
+// Fill products in stock
+export const fillProductsInStock = async (req, res) => {
+  logger.info(`${req.method} - ${req.originalUrl}, filling products in stock...`);
+  const paramProducts = req.param('products') ? req.param('products') : null;
+  // Check if the param 'products' is not null
+  if (paramProducts === null) {
+    logger.error(`${req.method} - ${req.originalUrl}, products were not passed`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Products were not passed'));
+    return;
+  }
+  // Try to transform into a JSON object
+  let products;
+  try {
+    products = JSON.parse(paramProducts);
+  } catch (err) {
+    logger.error(`${req.method} - ${req.originalUrl}, error parsing products: ${err}`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Error parsing products'));
+    return;
+  }
+  // Check if products is an empty list
+  if (products.length === 0) {
+    logger.error(`${req.method} - ${req.originalUrl}, products were not passed`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Products were not passed'));
+    return;
+  }
+  // Check for every item in the list is a valid tuple
+  for (let i = 0; i < products.length; i++) {
+    const product = products[i];
+    if (!Object.keys(product).includes('product_id') || !Object.keys(product).includes('quantity')) {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${product} is not valid, it must have the keys product_id and quantity`);
+      res.status(HttpStatus.BAD_REQUEST.code)
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${product} is not valid, it must have the keys product_id and quantity`));
+      return;
+    }
+    // Check every 'quantity' parameter if is a valid number
+    if (isNaN(product.quantity) || product.quantity <= 0) {
+      logger.error(`${req.method} - ${req.originalUrl}, the item in index ${i} is invalid, the quantity ${product.quantity} is not a valid value`);
+      res.status(HttpStatus.BAD_REQUEST.code)
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The quantity ${product.quantity} is not valid`));
+      return;
+    }
+    // Check for every 'product_id' parameter if is an existing product
+    let result = await existsProductInStock(product.product_id);
+    if (result.length == 0) {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${product.product_id} does not exist in the stock`);
+      res.status(HttpStatus.BAD_REQUEST.code)
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${product.product_id} does not exist in the stock`));
+      return;
+    }
+  }
+  console.log(`TODOS SON VALIDOS\n\n`);
+};
+
+let existsProductInStock = async (productId) => {
+  let results = await new Promise((resolve, reject) => database.query(PRODUCT_QUERY.SELECT_PRODUCT, [productId], (err, results) => {
+    if (err) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting product: ${err}`);
+      reject(err);
+    } else{
+      resolve(results);
+    }
+  }));
+  return results;
+};
+
 export const fillProtuctInStock = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, filling product in stock...`);
   const product_id = req.params.id;
@@ -46,6 +114,7 @@ export const fillProtuctInStock = (req, res) => {
   // Check if the product exists in stock
   database.query(BUSINESSSTOCK_QUERY.SELECT_PRODUCT_IN_STOCK, [product_id], (error, results) => {
     if (error) {
+      console.log(`>>>>> 1`);
       logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
@@ -78,17 +147,16 @@ export const fillProtuctInStock = (req, res) => {
                   .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The product is not available'));
                 return;
               }
-              // Product can be available, but we can only make one order to a supplier per day
+              // We can only make a order to a supplier per week, the query check that
               const supplier_id = product.supplier_id;
-              database.query(SUPPLIER_QUERY.GET_LAST_ORDER_OF_SUPPLIER, [supplier_id], (error, results) => {
+              database.query(SUPPLIER_QUERY.CREATE_SUPPLIER_ORDER, [supplier_id], (error, results) => {
                 if (error) {
-                  logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
-                  res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
-                    .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
-                  return;
-                } else {
-                  const lastOrder = results[0].lastOrder;
-                  console.log(lastOrder);
+                  if (error.errno == 1000) {
+                    logger.error(`${req.method} - ${req.originalUrl}, error: The supplier with id ${supplier_id} has already a order registered this week`);
+                    res.status(HttpStatus.NOT_FOUND.code)
+                      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The supplier already has a order registered this week'));
+                    return;
+                  }
                 }
               });
             }
