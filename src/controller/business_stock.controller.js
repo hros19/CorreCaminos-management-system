@@ -43,6 +43,7 @@ export const fillProductsInStock = async (req, res) => {
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Products were not passed'));
     return;
   }
+  const productsInStock = [];
   // Check for every item in the list is a valid tuple
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
@@ -67,8 +68,12 @@ export const fillProductsInStock = async (req, res) => {
         .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${product.product_id} does not exist in the stock`));
       return;
     }
+    productsInStock.push(result[0]);
   }
-  console.log(`TODOS SON VALIDOS\n\n`);
+  // All valid products, try to fill them in the stock
+  for (let i in productsInStock) {
+    console.log(productsInStock[i]);
+  }
 };
 
 let existsProductInStock = async (productId) => {
