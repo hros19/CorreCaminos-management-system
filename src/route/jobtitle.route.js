@@ -4,12 +4,12 @@ import { createJobTitle, getPagedJobTitles, updateJobTitle, getJobTitle, deleteJ
 const jobtitleRoutes = express.Router();
 
 jobtitleRoutes.route('/')
-  .get(getPagedJobTitles) // Paginated (order, pag, limit)
-  .post(createJobTitle);
+  .get(getPagedJobTitles) // Tested
+  .post(createJobTitle); // Tested
 
 jobtitleRoutes.route('/:id')
-  .put(updateJobTitle)
-  .get(getJobTitle)
-  .delete(deleteJobTitle);
+  .put(updateJobTitle) // Tested
+  .get(getJobTitle) // Tested
+  .delete(deleteJobTitle); // Tested
 
 export default jobtitleRoutes;
