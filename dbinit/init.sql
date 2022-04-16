@@ -480,7 +480,6 @@ END $$
 PROCEDURE: upd_dev_day
 DESCRIPTION: Update an actually delivery day.
 */
-DROP PROCEDURE IF EXISTS upd_dev_day$$
 CREATE PROCEDURE upd_dev_day(IN pDevDayId INT, IN pDevDayName VARCHAR(255))
 BEGIN
 	UPDATE DeliveryDay
@@ -1429,7 +1428,8 @@ BEGIN
 		SET @ID = LAST_INSERT_ID();
 		SELECT * FROM Client WHERE client_id = @ID;
 	ELSE
-		SELECT 'Duplicated values' AS 'Error';
+		SIGNAL SQLSTATE '23000'
+    SET MESSAGE_TEXT = 'Client not created', MYSQL_ERRNO = 1000;
 	END IF;
 END $$
 
@@ -1517,7 +1517,9 @@ BEGIN
 				RIGHT JOIN Client ON cxdd.client_id = Client.client_id
 				LEFT JOIN DeliveryDay ON cxdd.dev_day_id = DeliveryDay.dev_day_id
 				WHERE ( ((Client.client_id, DeliveryDay.dev_day_id) = (pClientId, pDevDayId)) AND Client.business_name != '' AND DeliveryDay.dev_day_name != '');
-		ELSE SELECT 'Limit of days passed' AS 'Error';
+		ELSE
+			SIGNAL SQLSTATE '23000'
+    	SET MESSAGE_TEXT = 'ClientXDevDay not created', MYSQL_ERRNO = 1000;
 	END CASE;
 END $$
 
@@ -1802,6 +1804,34 @@ BEGIN
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
 END $$
+
+/*
+PROCEDURE get_ordersOfClient
+DESCRIPTION: Get all the orders made by a client.
+*/
+CREATE PROCEDURE get_ordersOfClient(IN pClientId INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+	SET @strQuery = CONCAT('SELECT * FROM ClientOrder ',
+												 'WHERE client_id = ', pClientId);
+	PREPARE myQuery FROM @strQuery;
+	EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE getp_ordersOfClient
+DESCRIPTION: Get all the orders of a client with pagination parameters
+*/
+CREATE PROCEDURE getp_ordersOfClient(IN pClientId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+	SET @strQuery = CONCAT('SELECT * FROM ClientOrder ',
+												 'WHERE client_id = ', pClientId, ' ',
+												 'ORDER BY ', pParameter,' ', pOrder, ' ', 
+												 'LIMIT ', pStart, ', ', pElemPerPage);
+	PREPARE myQuery FROM @strQuery;
+	EXECUTE myQuery;
+END $$
  
 /*
 PROCEDURE: upd_clientOrder
@@ -2018,7 +2048,7 @@ CALL create_zonexroute(3, 9);
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- Initial info for Supplier, ProductCategory and ProductSubCategory
 CALL create_supplier('Dos Pinos', 'Avenida central contiguo al estadio', '27030606', 'dospinos@cr.com', 'YES');
-CALL create_supplier('Coca Cola FEMSA', 'Frente al teatro Nacional de San José', '27806924', 'cocacola@cr.com', 'YES');
+CALL create_supplier('Coca Cola FEMSA', 'Frente al teatro Nacional de Alajuela', '27806924', 'cocacola@cr.com', 'YES');
 CALL create_supplier('Pepsico', 'A la par de mogambos', '27455501', 'pepsico@cr.com', 'NO');
 
 CALL create_prodCat('Granos básicos'); -- 1
