@@ -14,7 +14,8 @@ import supplierRoutes from './route/supplier.route.js';
 import zoneRoutes from './route/zone.route.js';
 import productcategoryRoutes from './route/productcategory.route.js';
 import productRoutes from './route/product.route.js';
-import businessStockRoutes from './route/business_stock.route.js'
+import businessStockRoutes from './route/business_stock.route.js';
+import deliveryRoutes from './route/delivery.route.js';
 
 dotenv.config();
 
@@ -25,15 +26,36 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/vehicle', vehicleRoutes);
-app.use('/jobTitle', jobtitleRoutes);
-app.use('/driver', driverRoutes);
-app.use('/businessType', businesstypeRoute);
-app.use('/zone', zoneRoutes);
+app.use('/vehicle', vehicleRoutes); // tested
+app.use('/jobTitle', jobtitleRoutes); // tested
+app.use('/driver', driverRoutes); // tested
+app.use('/businessType', businesstypeRoute); // tested
+app.use('/zone', zoneRoutes); // tested
 app.use('/supplier', supplierRoutes);
 app.use('/productCat', productcategoryRoutes);
 app.use('/product', productRoutes);
 app.use('/stock', businessStockRoutes);
+app.use('/delivery', deliveryRoutes);
+app.use('/', (req, res) => {
+  res.status(HttpStatus.OK.code)
+    .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Welcome to CorreCaminos management system', { 
+      ip: ip.address(),
+      port: PORT,
+      version: '1.0.0',
+      environment: process.env.NODE_ENV,
+      nodeVersion: process.version,
+      database: process.env.DB_NAME,
+      institute: "Instituto Tecnologico de Costa Rica",
+      career: "Ingenieria en Computacion",
+      course: "Bases de Datos II",
+      assign: "Proyecto 01 - CorreCaminos management system",
+      group: "Grupo 60",
+      instructor: "Ing. Kenneth Obando",
+      student: "Hansol Antay",
+      semester: "1er Semestre",
+      year: "2022"
+    }));
+});
 app.all('*', (req, res) => {
   res.status(HttpStatus.NOT_FOUND.code)
     .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The resource ${req.originalUrl} was not found`));
