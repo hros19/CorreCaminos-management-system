@@ -7,30 +7,30 @@ const zoneRoutes = express.Router();
 
 //Properly zone routes
 zoneRoutes.route('/')
-  .get(getPagedZones) // Paginated
-  .post(createZone)
-
-zoneRoutes.route('/:id')
-  .get(getZone)
-  .put(updateZone)
-  .delete(deleteZone);
+  .get(getPagedZones) // tested
+  .post(createZone) // tested
 
 //Route routes XD
 zoneRoutes.route('/route')
-  .get(getPagedRoutes) // Paginated
-  .post(createRoute);
+  .get(getPagedRoutes) // tested
+  .post(createRoute); // tested
 
 zoneRoutes.route('/route/:route_id')
-  .get(getRoute)
-  .put(updateRoute)
-  .delete(deleteRoute)
+  .get(getRoute) //tested
+  .put(updateRoute) //tested
+  .delete(deleteRoute) // tested
+
+zoneRoutes.route('/:id')
+  .get(getZone) // tested
+  .put(updateZone) // tested
+  .delete(deleteZone); // tested
 
 zoneRoutes.route('/:id/route')
-  .get(getPagedZoneRoutes);
+  .get(getPagedZoneRoutes); //tested
 
 //ZoneXRoute routes
 zoneRoutes.route('/:id/route/:route_id')
-  .post(createZoneXRoute)
-  .delete(deleteZoneXRoute);
+  .post(createZoneXRoute) // tested
+  .delete(deleteZoneXRoute); //tested
 
 export default zoneRoutes;
