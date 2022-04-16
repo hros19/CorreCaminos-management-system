@@ -43,7 +43,12 @@ export const fillVehicleTank = (req, res) => {
         .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with id ${req.params.id} was not found`));
     } else {
       // Vehicle founded, fill the tank...
-      const gasAmount = req.param('gasAmount') || 1;
+      const gasAmount = req.body.gasAmount || null;
+      if (gasAmount == null) {
+        res.status(HttpStatus.BAD_REQUEST.code)
+          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The parameter 'gasAmount' is required`));
+        return;
+      }
       database.query(VEHICLE_QUERY.FILL_VEHICLE_TANK, [req.params.id, gasAmount], (error, results) => {
         if (error) {
           if (error.errno == 1000) {
@@ -94,7 +99,13 @@ export const createVehicle = (req, res) => {
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `${error.errno}: Invalid parameter values, check documentation`));
         return;
-      } else {
+      } 
+      if (error.errno == 1062) {
+        res.status(HttpStatus.BAD_REQUEST.code)
+          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `${error.errno}: Duplicated values for vehicle`));
+        return;
+      }
+      else {
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `${error.errno}: ${error.sqlMessage}`));
         return;
@@ -113,8 +124,8 @@ export const createVehicle = (req, res) => {
 
 export const getPagedVehicles = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, retrieving vehicles...`);
-  const parameter = req.param('parameter') || 'vehicle_id';
-  const order = req.param('order') || 'DESC';
+  const parameter = req.body.parameter || 'vehicle_id';
+  const order = req.body.order || 'ASC';
   // Validation of pagination parameters
   if (!ORDER_VALUES.includes(order) || !PARAMETER_VALUES.includes(parameter)) {
     res.status(HttpStatus.BAD_REQUEST.code)
@@ -123,14 +134,20 @@ export const getPagedVehicles = (req, res) => {
     return;
   }
   database.query(VEHICLE_QUERY.SELECT_VEHICLES, (error, results) => {
+    if (error) {
+      logger.error(`${req.method} ${req.originalUrl}, error retrieving vehicles: ${error.message}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
+      return;
+    }
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
         .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Vehicles not found`));
     } else {
-      const page = req.param('pag') ? Number(req.param('pag')) : 1;
-      const limit = req.param('limit') ? Number(req.param('limit')) : 10;
+      const page = Number(req.body.pag) || 1;
+      const limit = Number(req.body.limit) || 10;
       // Validation page parameters
-      if (isNaN(page) || isNaN(limit)) {
+      if (limit < 1 || limit > 100) {
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status,
                              `Invalid values for pagination (check 'pag' and 'limit' values in the request)`));
@@ -186,13 +203,14 @@ export const updateVehicle = (req, res) => {
   const BODY_PARAMETERS = Object.values(req.body);
   // Checking quantity of parameters
   if (BODY_PARAMETERS.length != 4) {
-    console.log(BODY_PARAMETERS.length);
+    logger.error(`${req.method} ${req.originalUrl}, error updating vehicle: invalid parameters, quantity of parameters must be 4`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid numbers of parameters`));
     return;
   }
   // Checking no-empty parameters ('');
   if (BODY_PARAMETERS.includes('', "")) {
+    logger.error(`${req.method} ${req.originalUrl}, error updating vehicle: invalid parameters, empty parameters are not allowed`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty parameters are not allowed`));
     return;
@@ -219,7 +237,7 @@ export const updateVehicle = (req, res) => {
           // Unexpected error
           console.log(`>>> ${error.errno}`);
           res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
-            .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
+            .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `${error.errno}: ${error.sqlMessage}`));
           return;
         } else {
           res.status(HttpStatus.OK.code)
@@ -259,7 +277,12 @@ export const registerKilometers = (req, res) => {
       res.status(HttpStatus.NOT_FOUND.code)
         .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The vehicle with the id ${req.params.id} was not found`));
     } else {
-      const kilometers = req.param('kilometers') ? Number(req.param('kilometers')) : 0;
+      const kilometers = Number(req.body.kilometers) || null;
+      if (kilometers === null) {
+        res.status(HttpStatus.BAD_REQUEST.code)
+          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid kilometers value`));
+        return;
+      }
       database.query(VEHICLE_QUERY.REGISTER_KILOMETERS, [req.params.id, kilometers], (error, results) => {
         if (error) {
           if (error.errno == 1000) {
@@ -292,10 +315,10 @@ export const registerKilometers = (req, res) => {
 
 export const updateMaintenenaceLog = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, updating maintenance log...`);
-  const status = req.param('status');
+  const status = req.body.status || null;
   // Check if the parameter was passed by the user
-  if (isNaN(status)) {
-    res.staatus(HttpStatus.BAD_REQUEST.code)
+  if (!status) {
+    res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Obligatory parameters were not found (status) is required`));
     return;
   }
@@ -313,9 +336,9 @@ export const updateMaintenenaceLog = (req, res) => {
     } else {
       // Existing maintenance log, then update.
       database.query(VEHICLE_QUERY.UPDATE_MAINTENANCELOG, [req.params.id, status], (error, results) => {
-        if (affectedRows > 0) {
+        if (results.affectedRows > 0) {
           res.status(HttpStatus.OK.code)
-            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log updated sucessfully`, { id: req.params.id, new_status: status }));
+            .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log updated sucessfully`, { maintenance_id: req.params.id, new_status: status }));
         } else {
           res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
             .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
@@ -329,12 +352,17 @@ export const getMaintenanceLogsOfVehicle = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, getting maintenance logs of a vehicle...`);
   // Search if exists maintenance logs asociated to that vehicle
   database.query(VEHICLE_QUERY.GET_MAINTENANCELOGS_OF_VEHICLE, [req.params.id], (error, results) => {
+    if (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behaviour`));
+      return;
+    }
     if (!results[0][0]) {
       res.status(HttpStatus.NOT_FOUND.code)
         .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance logs were found for the vehicle with id ${req.params.id}`));
     } else {
-      const page = req.param('pag') ? Number(req.param('pag')) : 1;
-      const limit = req.param('limit') ? Number(req.param('limit')) : 1;
+      const page = Number(req.body.pag) || 1;
+      const limit = Number(req.body.limit) || 10;
       // Validation page parameters
       if (isNaN(page) || isNaN(limit)) {
         res.status(HttpStatus.BAD_REQUEST.code)
@@ -355,8 +383,9 @@ export const getMaintenanceLogsOfVehicle = (req, res) => {
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page requested (${page}), must be 1 or higher`));
         return;
       }
+      let startingLimit = (page - 1) * limit;
       // Valid pagination parameters
-      database.query(VEHICLE_QUERY.GETP_MAINTENANCELOGS_OF_VEHICLE, [req.params.id, page, limit], (error, results) => {
+      database.query(VEHICLE_QUERY.GETP_MAINTENANCELOGS_OF_VEHICLE, [req.params.id, startingLimit, limit], (error, results) => {
         if (error) {
           console.log(error);
           res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
@@ -375,7 +404,7 @@ export const getMaintenanceLog = (req, res) => {
   database.query(VEHICLE_QUERY.SELECT_MAINTENANCELOG, [req.params.id], (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
-        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance log with id  ${req.params.id} was not found`));
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance log with id ${req.params.id} was not found`));
     } else {
       res.status(HttpStatus.OK.code)
         .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Maintenance log with id ${req.params.id} was founded`, results[0]));
@@ -389,7 +418,7 @@ export const deleteMaintenanceLog = (req, res) => {
   database.query(VEHICLE_QUERY.SELECT_MAINTENANCELOG, [req.params.id], (error, results) => {
     if (!results[0]) {
       res.status(HttpStatus.NOT_FOUND.code)
-        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance log with id  ${req.params.id} was not found`));
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No maintenance log with id ${req.params.id} was not found`));
     } else {
       database.query(VEHICLE_QUERY.DELETE_MAINTENANCELOG, [req.params.id], (error, results) => {
         if (results.affectedRows > 0) {
@@ -408,14 +437,17 @@ export const deleteMaintenanceLog = (req, res) => {
 export const registerMaintenanceLog = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, registering maintenance log...`);
   // Check if the parameter was passed by the user
-  const status = req.param('status');
-  if (isNaN(status)) {
+  const status = req.body.status || null;
+  console.log(`>>>> ${isNaN(status)}`);
+  if (status == null) {
+    logger.error(`${req.method} ${req.originalUrl}, status parameter is obligatory`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The parameter 'status' was not found on the request`));
     return;
   }
   // Check if the status is valid
   if (status == '') {
+    logger.error(`${req.method} ${req.originalUrl}, status parameter cannot be empty`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty values for parameters are not allowed`));
     return;
@@ -434,7 +466,7 @@ export const registerMaintenanceLog = (req, res) => {
             .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
         } else {
           res.status(HttpStatus.CREATED.code)
-            .send(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Maintenance log registered sucessfully for the vehicle with id ${req.params.id}`, results[0]);
+            .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Maintenance log registered sucessfully for the vehicle with id ${req.params.id}`, results[0]));
         }
       });
     }
