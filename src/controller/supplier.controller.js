@@ -13,6 +13,98 @@ const PARAMETER_PRODBYSUPPLIER_VALUES = [
   'product_id', 'product_name', 'product_subcat_id', 'product_subcat_name', 'supplier_id', 'supplier_name', 'is_available'
 ];
 
+const PARAMETER_ORDERSBYSUPPLIER_VALUES = [
+  'supplier_order_id', 'supplier_id', 'order_date'
+];
+
+export const getOrdersBySupplier = (req, res) => {
+  logger.info(`${req.method} - ${req.originalUrl}, retrieving orders by supplier...`);
+  const supplier_id = req.params.id ? req.params.id : null;
+  const parameter = req.param('parameter') || 'supplier_id';
+  const order = req.param('order') || 'ASC';
+  // Check order value
+  if (order !== 'ASC' && order !== 'DESC') {
+    logger.error(`${req.method} - ${req.originalUrl}, invalid order value: ${order}`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid order value: ${order}`));
+    return;
+  }
+  // Check parameter values
+  if (!PARAMETER_ORDERSBYSUPPLIER_VALUES.includes(parameter)) {
+    logger.error(`${req.method} - ${req.originalUrl}, invalid parameter value: ${parameter}`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameter value: ${parameter}`));
+    return;
+  }
+  // Check supplier id value
+  if (supplier_id == null) {
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Supplier ID is required'));
+    return;
+  }
+  // Search for orders by supplier
+  database.query(SUPPLIER_QUERY.SELECT_ORDERS_BY_SUP, [supplier_id], (err, result) => {
+    if (err) {
+      logger.error(`${req.method} - ${req.originalUrl}, error: ${err}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error retrieving orders by supplier'));
+      return;
+    } else {
+      if (!result[0]) {
+        logger.info(`${req.method} - ${req.originalUrl}, no orders found for supplier: ${supplier_id}`);
+        res.status(HttpStatus.OK.code)
+          .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'No orders found for supplier'));
+        return;
+      } else {
+        const page = req.param('pag') ? parseInt(req.param('pag')) : 1;
+        const limit = req.param('limit') ? parseInt(req.param('limit')) : 10;
+        // Validation of page parameters
+        if (isNaN(page) || isNaN(limit)) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid page or limit value: ${page} or ${limit}`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page or limit value'));
+          return;
+        }
+        // Calculation of pagination parameters
+        let numOfResults = result.length;
+        let numOfPages = Math.ceil(numOfResults / limit);
+        if (page > numOfPages) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid page value: ${page}`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page value: ${page}, max page: ${numOfPages}`));
+          return;
+        }
+        if (page < 1) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid page value: ${page}`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page value: ${page}, min page: 1`));
+          return;
+        }
+        // Valid pagination parameters
+        const startingLimit = (page - 1) * limit;
+        database.query(SUPPLIER_QUERY.SELECT_PAGED_ORDERS_BY_SUP, [parameter, order, startingLimit, limit], (error, results) => {
+          if (error) {
+            logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+              .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error retrieving orders by supplier'));
+            return;
+          } else {
+            if (!results[0]) {
+              logger.info(`${req.method} - ${req.originalUrl}, no orders found for supplier: ${supplier_id}`);
+              res.status(HttpStatus.OK.code)
+                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'No orders found for supplier'));
+            } else {
+              logger.info(`${req.method} - ${req.originalUrl}, orders found for supplier: ${supplier_id}`);
+              res.status(HttpStatus.OK.code)
+                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Orders found for supplier', { data: results[0], page, numOfPages }));
+            }
+          }
+        });
+      }
+    }
+  });
+}
+
 export const getProductsBySupplier = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, getting products by supplier`);
   const supplier_id = req.params.id;
@@ -247,7 +339,7 @@ export const deleteSupplier = (req, res) => {
 
 export const getSupplier = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, getting supplier...`);
-  const supplier_id = req.params.supplier_id;
+  const supplier_id = req.params.id;
   database.query(SUPPLIER_QUERY.SELECT_SUPPLIER, [supplier_id], (error, results) => {
     if (error) {
       logger.error(`${req.method} ${req.originalUrl}, error: ${error}`);
