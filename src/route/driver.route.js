@@ -4,12 +4,12 @@ import { createDriver, updateDriver, getPagedDrivers, getDriver, deleteDriver } 
 const driverRoutes = express.Router();
 
 driverRoutes.route('/')
-  .get(getPagedDrivers) // Paginated
-  .post(createDriver);
+  .get(getPagedDrivers) // Tested
+  .post(createDriver); // Tested
 
 driverRoutes.route('/:id')
-  .get(getDriver)
-  .put(updateDriver)
-  .delete(deleteDriver);
+  .get(getDriver) // Tested
+  .put(updateDriver) // Tested
+  .delete(deleteDriver); //  Tested
 
 export default driverRoutes;
