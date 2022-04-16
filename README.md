@@ -35,3 +35,4 @@ Since the beginning of the pandemic, our client (Corre Caminos S.A) had a great 
 And more specifically, the following logical diagram is built, which will be the database.
 
 ![logical diagram](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/hros19/restapi-management-systems/main/logical_diagram.puml)
+![logical diagram B](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/hros19/CorreCaminos-management-system/main/logical_diagramB.puml)
