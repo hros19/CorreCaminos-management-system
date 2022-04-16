@@ -6,32 +6,32 @@ import { getVehicle, updateVehicle, deleteVehicle, registerKilometers, updateMai
 const vehicleRoutes = express.Router();
 
 vehicleRoutes.route('/')
-  .get(getPagedVehicles) // Paginated
-  .post(createVehicle); // Create
+  .get(getPagedVehicles) // Tested
+  .post(createVehicle); // Tested
 
 vehicleRoutes.route('/:id')
-  .get(getVehicle)
-  .put(updateVehicle)
-  .delete(deleteVehicle);
+  .get(getVehicle) // Tested
+  .put(updateVehicle) // Tested
+  .delete(deleteVehicle); // Tested
 
 vehicleRoutes.route('/:id/status')
-  .get(checkVehicleStatus);
+  .get(checkVehicleStatus); // Tested
 
 vehicleRoutes.route('/:id/fillTank')
-  .put(fillVehicleTank); // id, gasAmount
+  .put(fillVehicleTank); // Tested
 
 vehicleRoutes.route('/:id/registerKilometers')
-  .put(registerKilometers); // id, kilometers
+  .put(registerKilometers); // Tested
 
 vehicleRoutes.route('/:id/registerMaintenance')
-  .post(registerMaintenanceLog); // status
+  .post(registerMaintenanceLog); // Tested
 
 vehicleRoutes.route('/:id/maintenances')
-  .get(getMaintenanceLogsOfVehicle); // id, page, limit
+  .get(getMaintenanceLogsOfVehicle); // Tested
 
 vehicleRoutes.route('/maintenance/:id')
-  .get(getMaintenanceLog)
-  .put(updateMaintenenaceLog) // maintenance_id, status
-  .delete(deleteMaintenanceLog);
+  .get(getMaintenanceLog) // Tested
+  .put(updateMaintenenaceLog) // Tested
+  .delete(deleteMaintenanceLog); // Tested
 
 export default vehicleRoutes;
