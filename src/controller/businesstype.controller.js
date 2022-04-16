@@ -12,7 +12,7 @@ export const createBusinessType = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, creating business type`);
   const BODY_PARAMETERS = Object.values(req.body);
   // Checking quantity of parameters
-  if (BODY_PARAMETERS.length != 2) {
+  if (BODY_PARAMETERS.length != 1) {
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
     return;
@@ -52,39 +52,45 @@ export const createBusinessType = (req, res) => {
 
 export const getPagedBusinessTypes = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, retrieving business type...`);
-  const order = req.param('order') || 'DESC';
+  const order = req.body.order || 'ASC';
   // Validation of register parameters
   if (!ORDER_VALUES.includes(order)) {
+    logger.error(`${req.method} ${req.originalUrl}, invalid order value`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameters for pagination order (check 'order' value)`));
     return;
   }
   database.query(BUSINESSTYPE_QUERY.SELECT_BUSINESSTYPES, (error, results) => {
     if (error) {
-      console.log(error);
+      logger.error(`${req.method} ${req.originalUrl}, error on query: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
     } else {
       if (!results[0]) {
+        logger.error(`${req.method} ${req.originalUrl}, no business type found`);
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The business type was not created`));
       } else {
-        const page = req.param('pag') ? Number(req.param('pag')) : 1;
-        const limit = req.param('limit') ? Number(req.param('limit')) : 1;
-        if (isNaN(page) || isNaN(limit)) {
+        const page = Number(req.body.pag) || 1;
+        const limit = Number(req.body.limit) || 10;
+        console.log(`>>>>>. ${page} ${limit}`);
+        if (limit < 1 || limit > 100) {
+          logger.error(`${req.method} ${req.originalUrl}, invalid limit value`);
           res.status(HttpStatus.BAD_REQUEST.code)
-            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid values for pagination (check 'pag' and 'limit' values in the request)`));
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameters for pagination limit (check 'limit' value)`));
           return;
         }
         // Calculation for pagination paramaters
         let numOfResults = results.length;
         let numOfPages = Math.ceil(numOfResults / limit);
         if (page > numOfPages) {
+          logger.error(`${req.method} ${req.originalUrl}, invalid page value`);
           res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Selected page exceeds total page number. The total pages is ${numOfPages} and the page ${page} was requested`));
           return;
         }
         if (page < 1) {
+          logger.error(`${req.method} ${req.originalUrl}, invalid page value`);
           res.status(HttpStatus.BAD_REQUEST.code)
            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page requested (${page}), must be 1 or higher`));
           return;
@@ -93,11 +99,12 @@ export const getPagedBusinessTypes = (req, res) => {
         const startingLimit = (page - 1) * limit;
         database.query(BUSINESSTYPE_QUERY.SELECT_PAGED_BUSINESSTYPES, [order, startingLimit, limit], (error, results) => {
           if (error) {
-            console.log(error);
+            logger.error(`${req.method} ${req.originalUrl}, error on query: ${error}`);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `The business type was not created`));
           } else {
             if (!results[0]) {
+              logger.error(`${req.method} ${req.originalUrl}, no business type found`);
               res.status(HttpStatus.NOT_FOUND.code)
                 .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Business types not found`));
             } else {
