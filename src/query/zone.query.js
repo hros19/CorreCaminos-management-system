@@ -7,7 +7,7 @@ const ZONE_QUERY = {
   DELETE_ZONE: 'DELETE FROM Zone WHERE zone_id = ?',
   // Routes
   CREATE_ROUTE: 'CALL create_route(?, ?)',
-  SELECT_PAGED_ROUTES: 'CALL getp_routes(?, ?, ?)',
+  SELECT_PAGED_ROUTES: 'CALL getp_routes(?, ?, ?, ?)',
   SELECT_ROUTES: 'SELECT * FROM Route',
   SELECT_ROUTE: 'SELECT * FROM Route WHERE route_id = ?',
   UPDATE_ROUTE: 'CALL upd_route(?, ?, ?)',
