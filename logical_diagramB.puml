@@ -1,0 +1,107 @@
+@startuml Logical Database Model Part B
+
+skinparam BackgroundColor transparent
+
+skinparam HeaderFontColor red
+skinparam HeaderFontSize 18
+
+skinparam ArrowFontSize 15
+skinparam ArrowColor D3374A
+skinparam ArrowThickness 2
+skinparam ArrowFontColor #3FD0C4
+
+skinparam ClassBorderColor white
+skinparam ClassBorderThickness 3
+skinparam ClassAttributeFontSize 14
+skinparam ClassAttributeFontColor FF6127
+skinparam ClassBackgroundColor #283747
+skinparam ClassFontSize 15
+skinparam ClassFontStyle Bold
+skinparam ClassFontColor #FFB623
+
+header Logical Model
+
+entity "Vehicle" as Vehicle {
+    **PK** vehicle_id: int <<generated>>
+    --
+    car_plaque: VARCHAR <<unique>>
+    car_brand: VARCHAR
+    type_of_gas: VARCHAR = 'premium'
+    purchase_date: date = CURRENT_DATE
+    gas_tank_capacity: float
+    gas_tank_status: float = 0.0
+    last_gas_refill: date = CURRENT_DATE
+    kilometers_traveled: float = 0.0
+}
+
+entity "Driver" as Driver {
+    **PK** driver_id: int <<generated>>
+    **FK** vehicle_id: <<Vehicle.vehicle_id, unique>>
+    **FK** job_title_id: <<JobTitle.job_title_id>>
+    --
+    driver_name: VARCHAR
+    driver_doc_id: int <<unique>>
+    salary: int
+    hiring_date: date = CURRENT_DATE
+}
+
+entity "GeologicalAddress" as GeologicalAddress {
+  **PK** geo_address_id: int <<generated>>
+  --
+  latitude: float
+  longitude: float
+  geo_point: POINT
+  --
+  (latitude, longitude; <<unique>>)
+}
+
+entity "JobTitle" as JobTitle {
+    **PK** job_title_id: int <<generated>>
+    --
+    job_title_name: VARCHAR <<unique>>
+}
+
+entity "MaintenanceLog" as MaintenanceLog {
+    **PK** maintenance_id: int <<generated>>
+    **FK** vehicle_id: int <<Vehicle.vehicle_id>> 
+    --
+    maintenance_type: VARCHAR
+    maintenenace_date: date = CURRENT_DATE
+}
+
+entity "DeliveryDay" as DeliveryDay {
+  **PK** dev_day_id: int <<generated>>
+  --
+  dev_day_name: VARCHAR <<unique>>
+}
+
+entity "DeliveryInterval" as DeliveryInterval {
+  **PK** dev_interval_id: int <<generated>>
+  --
+  dev_interval_name: VARCHAR <<unique>>
+}
+
+entity "BusinessType" as BusinessType {
+  **PK** business_type_id: int <<generated>>
+  --
+  business_type_name: VARCHAR <<unique>>
+}
+
+entity "Zone" as Zone {
+  **PK** zone_id: int <<generated>>
+  --
+  zone_name: VARCHAR <<unique>>
+}
+
+entity "Route" as Route {
+  **PK** route_id: int <<generated>>
+  --
+  route_name: VARCHAR <<unique>>
+  route_distance_km: float
+}
+
+entity "ZoneXRoute" as ZoneXRoute {
+  **PK** (zone_id, route_id)
+  **FK** route_id: int <<Route.route_id>>
+  **FK** zone_id: int <<Zone.zone_id>>
+}
