@@ -19,130 +19,105 @@ skinparam ClassFontSize 15
 skinparam ClassFontStyle Bold
 skinparam ClassFontColor #FFB623
 
-
-header Logical Model
-
 entity "Client" as Client {
-  **client_id** : integer <<generated>>
+  **PK** client_id : int <<generated>>
+  **FK** geo_address_id: int
+    <<GeologicalAddress.geo_address_id>>
+  **FK** zone_id: int
+    <<Zone.zone.id>>
+  **FK** dev_interval_id: int
+    <<DeliveryInterval.dev_interval_id>>
+  **FK** buiness_type_id: int
+    <<BusinessType.business_type_id>>
   --
-  *business_name : text
-  *business_type : text
-  *business_representative: text
-  *phone_number: integer
-  *email: text
-  *zone: text
-  *formal_address: text
-  *geological_address: point
-  *delivery_interval: text
-  *delivery_days: text
-}
-note top
-  delivery_interval 
-  = {daily, weekly, twoPerWeek, biweekly}
-end note
-
-entity "Vehicle" as Vehicle {
-    **vehicle_id**: number <<generated>>
-    --
-    *car_brand: text
-    *car_plaque: text
-    type_of_gas: text = 'premium'
-    *purchase_date: date
-    *tank_capacity: float
-    *current_gasoline_amount: float
-    last_gas_refill: date
-    kilometers_traveled: float
+  business_name: VARCHAR <<unique>>
+  business_representative: VARCHAR
+  phone_number: VARCHAR <<unique>>
+  email: VARCHAR <<unique>>
+  formal_address: VARCHAR 
 }
 
-entity "MaintenanceLog" as MaintenanceLog {
-    **maintenance_id**: integer <<generated>>
-     //vehicle_id//: <<FK: Vehicle.vehicle_id>> 
-    --
-    *maintenance_type: text
-    *maintenenace_day: date = now()
-}
-
-entity "Driver" as Driver {
-    **driver_id**: integer <<generated>>
-    //vehicle_id//: <<FK: Vehicle.vehicle_id>>
-    --
-    *driver_name: text
-    *driver_doc_id: integer
-    *salary: integer
-    *hiring_date: date = now()
+entity "ClientXDevDay" as ClientXDevDay {
+  **PK** (client_id, dev_day_id)
+  **FK** client_id: int
+    <<Client.client_id>>
+  **FK** dev_day_id: int
+    <<DeliveryDay.dev_day_id>>
 }
 
 entity "ClientOrder" as OrderC{
-    **order_id**: integer <<generated>>
-    //client_id//: <<FK Client.client_id>>
+    **PK** client_order_id: int <<generated>>
+    **FK** client_id: <<Client.client_id>>
     --
-    *status: text = 'pending'
+    order_status: VARCHAR
+    order_date: date = CURRENT_DATE
+    order_delivery_date: date
 }
 
 entity "ClientOrderDetail" as OrderDetail {
-    //order_id//: <<FK ClienteOrder.order_id>>
-    //product_id//: <<FK Product.product_id>>
+    **PK** (client_order_id, product_id)
+    **FK** client_order_id: int
+      <<OrderC.client_order_id>>
+    **FK** product_id: int
+      <<Product.product_id>>
     --
-    *quantity: integer
+    quantity: int
 }
 
 entity "Business Stock" as BusinessStock {
-    **//product_id//**: <<FK: Product.product_id>>
+    **PK FK** product_id: <<Product.product_id>>
     --
-    *quantity: integer
+    quantity: int
 }
 
 entity "Supplier" as Supplier {
-    **supplier_id**: integer <<generated>>
+    **PK** supplier_id: int <<generated>>
     --
-    *supplier_name: text
-    *formal_address: text
-    *phone_number: integer
-    *email: text
-    *have_delivery: text {'Y', 'N'}
+    supplier_name: VARCHAR <<unique>>
+    formal_address: VARCHAR
+    phone_number: VARCHAR <<unique>>
+    email: VARCHAR <<unique>>
+    have_delivery: VARCHAR {'YES', 'NO'}
+}
+
+entity "ProductCategory" as ProductCategory {
+    **PK** product_category_id: int <<generated>>
+    --
+    product_cat_name: VARCHAR <<unique>>
+}
+
+entity "ProductSubCategory" as ProductSubCategory {
+    **PK** product_subcat_id: int <<generated>>
+    **FK** product_subcat_catId: 
+      int <<ProductCategory.product_category_id>>
+    --
+    product_sub_cat_name: VARCHAR <<unique>>
 }
 
 entity "Product" as Product {
-    **product_id**: integer <<generated>>
+    **PK** product_id: int <<generated>>
+    **FK** supplier_id: int <<Supplier.supplier_id>>
+    **FK** product_cat_id: 
+      int <<ProductCategory.product_category_id>>
+    **FK** product_subcat_id:
+      int <<ProductSubCategory.product_subcat_id>>
     --
-    *product_name: text
-    *price: float
-    category_name: text = "ND"
-    subcategory_name: text = "ND"
-    is_available: text {'Y', 'N'} = 'Y'
-}
-
-entity "SupplierStock" as SupplierStock {
-    **supplier_stock_id**: integer <<generated>>
-    //supplier_id//: <<FK: Supplier.supplier_id>>
-    //product_id//: <<FK: Product.product_id>>
-    --
+    product_name: VARCHAR <<unique>>
+    is_available: VARCHAR {'YES', 'NO'}
 }
 
 entity "SupplierOrder" as SupplierOrder {
-    **supplier_order_id**: integer <<generated>>
-    //supplier_id//: <<FK: Supplier.supplier_id>>
+    **PK** supplier_order_id: int <<generated>>
+    **FK** supplier_id: <<Supplier.supplier_id>>
     --
-   *order_date: date = now()
+   order_date: date = CURRENT_DATE
 }
 
 entity "SupplierOrderDetail" as SupplierOrderDetail {
-    //supplier_order_id//: <<FK: SupplierOrder.supplier_order_id>>
-    //product_id//: <<FK: Product.product_id>>
+    **FK** supplier_order_id: <<SupplierOrder.supplier_order_id>>
+    **FK**product_id: <<Product.product_id>>
     --
-    *quantity: integer
+    quantity: int
 }
-
-Driver ||--|| Vehicle
-Vehicle ||--o{ MaintenanceLog
-Client ||--o{ OrderC
-Product ||--o{ OrderC
-OrderC ||--o{ OrderDetail
-Supplier ||--o{ SupplierOrder
-Supplier ||--o{ SupplierStock
-Product ||--o{ SupplierStock
-Product ||--o{ SupplierOrder
-BusinessStock ||--o{ Product
-SupplierOrder ||--o{  SupplierOrderDetail
 
 @enduml
