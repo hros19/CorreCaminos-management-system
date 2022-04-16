@@ -4,12 +4,12 @@ import { createBusinessType, getPagedBusinessTypes, getBusinessType, updateBusin
 const businesstypeRoute = express.Router();
 
 businesstypeRoute.route('/')
-  .get(getPagedBusinessTypes) // Paginated
-  .post(createBusinessType);
+  .get(getPagedBusinessTypes) // tested
+  .post(createBusinessType); // tested
 
 businesstypeRoute.route('/:id')
-  .get(getBusinessType)
-  .put(updateBusinesstype)
-  .delete(deleteBusinessType);
+  .get(getBusinessType) // tested
+  .put(updateBusinesstype) // tested
+  .delete(deleteBusinessType); // tested
 
 export default businesstypeRoute;
