@@ -6,16 +6,161 @@ import BUSINESSSTOCK_QUERY from '../query/business_stock.query.js';
 import PRODUCT_QUERY from '../query/product.query.js';
 import SUPPLIER_QUERY from '../query/supplier.query.js';
 
-/*
-SELECT_PAGED_PRODUCTS_IN_STOCK: 'CALL getp_businessStock(?, ?, ?, ?)',
-  SELECT_PRODUCTS_IN_STOCK: 'SELECT * FROM BusinessStock',
-  REGISTER_PRODUCT_IN_STOCK: 'CALL reg_prod_bussStock(?, ?)',
-  FILL_PRODUCT_IN_STOCK: 'CALL fill_product_bussStock(?, ?)',
-  UNREG_PRODUCT_IN_STOCK: 'CALL unreg_product_bussStock(?, ?)',
-  DELETE_PRODUCT_IN_STOCK: 'DELETE FROM BusinessStock WHERE product_id = ?'
-*/
 
-// Fill products in stock
+const PARAMETER_VALUES = [
+  'product_id', 'quantity'
+];
+
+export const getPagedProductsInStock = (req, res) => {
+  logger.info(`${req.method} - ${req.originalUrl}, retrieving products in stock...`);
+  const parameter = req.param('parameter') || 'product_id';
+  const order = req.param('order') || 'ASC';
+  // Check order value
+  if (order !== 'ASC' && order !== 'DESC') {
+    logger.error(`${req.method} - ${req.originalUrl}, invalid order value: ${order}`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid order value: ${order}`));
+    return;
+  }
+  // Check parameter values
+  if (!PARAMETER_VALUES.includes(parameter)) {
+    logger.error(`${req.method} - ${req.originalUrl}, invalid parameter value: ${parameter}`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameter value: ${parameter}`));
+    return;
+  }
+  database.query(BUSINESSSTOCK_QUERY.SELECT_PRODUCTS_IN_STOCK, (error, results) => {
+    if (error) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting products in stock: ${error}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Error getting products in stock: ${error}`));
+    } else {
+      if (!results[0]) {
+        logger.info(`${req.method} - ${req.originalUrl}, no products in stock`);
+        res.status(HttpStatus.NOT_FOUND.code)
+          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No products in stock'));
+      } else {
+        const page = req.param('pag') ? parseInt(req.param('pag')) : 1;
+        const limit = req.param('limit') ? parseInt(req.param('limit')) : 10;
+        // Validation of page parameters
+        if (isNaN(page) || isNaN(limit)) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid page or limit parameters`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page or limit parameters'));
+          return;
+        }
+        // Calculation of pagination parameters
+        let numOfResults = results.length;
+        let numOfPages = Math.ceil(numOfResults / limit);
+        if (page > numOfPages) {
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Selected page exceeds total page number. The total pages is ${numOfPages} and the page ${page} was requested`));
+          return;
+        }
+        if (page < 1) {
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page requested (${page}), must be 1 or higher`));
+          return;
+        }
+        // Valid pagination parameters
+        const startingLimit = (page - 1) * limit;
+        database.query(BUSINESSSTOCK_QUERY.SELECT_PAGED_PRODUCTS_IN_STOCK, [parameter, order, startingLimit, limit], (error, results) => {
+          if (error) {
+            logger.error(`${req.method} - ${req.originalUrl}, error getting products in stock: ${error}`);
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+              .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Error getting products in stock: ${error}`));
+          } else {
+            if (!results[0]) {
+              logger.info(`${req.method} - ${req.originalUrl}, no products in stock`);
+              res.status(HttpStatus.NOT_FOUND.code)
+                .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No products in stock'));
+            } else {
+              logger.info(`${req.method} - ${req.originalUrl}, products in stock retrieved successfully`);
+              res.status(HttpStatus.OK.code)
+                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Products in stock retrieved successfully', { data: results[0], page, numOfPages }));
+            }
+          }
+        });
+      }
+    }
+  });
+};
+
+export const getProdInStock = async (req, res) => {
+  logger.info(`${req.method} - ${req.originalUrl}, retrieving product in stock...`);
+  let result = await getProductInStock(req.param('id'));
+  if (result[0]) {
+    logger.info(`${req.method} - ${req.originalUrl}, product in stock retrieved successfully`);
+    res.status(HttpStatus.OK.code)
+      .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Product in stock retrieved successfully', result[0]));
+  } else {
+    logger.info(`${req.method} - ${req.originalUrl}, product in stock not found`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Product in stock not found'));
+  }
+};
+
+export const registerProductInStock = async (req, res) => {
+  logger.info(`${req.method} - ${req.originalUrl}, registering new product in stock`);
+  const product_id = req.params.id ? req.params.id : null;
+  const quantity = req.body.quantity ? req.body.quantity : null;
+  // Check if values are null
+  if (product_id == null || quantity == null) {
+    logger.error(`${req.method} - ${req.originalUrl}, missing parameters`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Missing parameters`));
+    return;
+  }
+  // Check if quantity is valid
+  if (quantity <= 0) {
+    logger.error(`${req.method} - ${req.originalUrl}, quantity must be greater than 0`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Quantity must be greater than 0`));
+    return;
+  }
+  // Check if the product exists
+  let result = await getProduct(product_id);
+  if (!result[0]) {
+    logger.error(`${req.method} - ${req.originalUrl}, product does not exist`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Product does not exist`));
+    return;
+  }
+  // Check if the product is already in stock
+  result = await getProductInStock(product_id);
+  if (result[0]) {
+    logger.error(`${req.method} - ${req.originalUrl}, product is already in stock`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Product is already in stock, you cant register again the product ${product_id}`));
+    return;
+  }
+  // Product not in stock, then register it
+  database.query(BUSINESSSTOCK_QUERY.REGISTER_PRODUCT_IN_STOCK, [product_id, quantity], (err, result) => {
+    if (err) {
+      logger.error(`${req.method} - ${req.originalUrl}, error registering product in stock: ${err}`);
+      if (err.errno == 1064) {
+        res.status(HttpStatus.BAD_REQUEST.code)
+          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameters values`));
+        return;
+      }
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Error registering product in stock`));
+    } else {
+      if (!result) {
+        logger.error(`${req.method} - ${req.originalUrl}, error registering product in stock: ${err}`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Error registering product in stock`));
+      } else {
+        const product = result[0][0];
+        logger.info(`${req.method} - ${req.originalUrl}, product registered in stock`);
+        res.status(HttpStatus.OK.code)
+          .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Product registered in stock`, { product }));
+      }
+    }
+  });
+}
+
+// Fill (existing) products in stock
 export const fillProductsInStock = async (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, filling products in stock...`);
   const paramProducts = req.param('products') ? req.param('products') : null;
@@ -230,97 +375,13 @@ let getProduct = async (productId) => {
 let getProductInStock = async (productId) => {
   let results = await new Promise((resolve, reject) => database.query(BUSINESSSTOCK_QUERY.SELECT_PRODUCT_IN_STOCK, [productId], (err, results) => {
     if (err) {
-      logger.error(`${req.method} - ${req.originalUrl}, error getting product: ${err}`);
+      logger.error(`Error getting product: ${err}`);
       reject(err);
     } else{
       resolve(results);
     }
   }));
   return results;
-};
-
-export const fillProtuctInStock = (req, res) => {
-  logger.info(`${req.method} - ${req.originalUrl}, filling product in stock...`);
-  const product_id = req.params.id;
-  const BODY_PARAMETERS = Object.values(req.body);
-  // Check quantity of parameters
-  if (BODY_PARAMETERS.length !== 1) {
-    res.status(HttpStatus.BAD_REQUEST.code)
-      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'The request body must have only one parameter'));
-    return;
-  }
-  // Check non-empty parameter values
-  if (BODY_PARAMETERS[0] === '') {
-    res.status(HttpStatus.BAD_REQUEST.code)
-      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'The request body must have a non-empty parameter value'));
-    return;
-  }
-  const quantityToFill = parseInt(BODY_PARAMETERS[0], 10) ? parseInt(BODY_PARAMETERS[0], 10) : 0;
-  if (isNaN(quantityToFill)) {
-    res.status(HttpStatus.BAD_REQUEST.code)
-      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'The request body must have a valid parameter value'));
-    return;
-  }
-  // Check if is a valid amount
-  if (quantityToFill <= 0) {
-    res.status(HttpStatus.BAD_REQUEST.code)
-      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'The request body must have a valid parameter value'));
-    return;
-  }
-  // Check if the product exists in stock
-  database.query(BUSINESSSTOCK_QUERY.SELECT_PRODUCT_IN_STOCK, [product_id], (error, results) => {
-    if (error) {
-      console.log(`>>>>> 1`);
-      logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
-        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
-      return;
-    } else {
-      if (!results[0]) {
-        logger.error(`${req.method} - ${req.originalUrl}, error: Product with id ${product_id} does not exist in stock`);
-        res.status(HttpStatus.NOT_FOUND.code)
-          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The product does not exist in stock'));
-      } else {
-        // Product is in stock then we need to get the
-        // information of the entire product
-        database.query(PRODUCT_QUERY.SELECT_PRODUCT, [product_id], (error, results) => {
-          if (error) {
-            logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
-            res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
-              .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
-            return;
-          } else {
-            if (!results[0]) {
-              logger.error(`${req.method} - ${req.originalUrl}, error: Product with id ${product_id} does not exist`);
-              res.status(HttpStatus.NOT_FOUND.code)
-                .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The product does not exist'));
-            } else {
-              const product = results[0];
-              // Check if the product is available
-              if (product.is_available != 'YES') {
-                logger.error(`${req.method} - ${req.originalUrl}, error: Product with id ${product_id} is not available`);
-                res.status(HttpStatus.NOT_FOUND.code)
-                  .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The product is not available'));
-                return;
-              }
-              // We can only make a order to a supplier per week, the query check that
-              const supplier_id = product.supplier_id;
-              database.query(SUPPLIER_QUERY.CREATE_SUPPLIER_ORDER, [supplier_id], (error, results) => {
-                if (error) {
-                  if (error.errno == 1000) {
-                    logger.error(`${req.method} - ${req.originalUrl}, error: The supplier with id ${supplier_id} has already a order registered this week`);
-                    res.status(HttpStatus.NOT_FOUND.code)
-                      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The supplier already has a order registered this week'));
-                    return;
-                  }
-                }
-              });
-            }
-          }
-        });
-      }
-    }
-  });
 };
 
 export const unregProductInStock = (req, res) => {
