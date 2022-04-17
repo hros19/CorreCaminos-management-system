@@ -76,8 +76,8 @@ export const getProductCategory = (req, res) => {
 
 export const getPagedProductCategories = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, getting product categories...`);
-  const parameter = req.param('parameter') ? req.param('parameter') : 'product_cat_name';
-  const order = req.param('order') ? req.param('order').toUpperCase() : 'DESC';
+  const parameter = req.body.parameter || 'product_cat_id';
+  const order = req.body.order || 'ASC';
   // Checking order values
   if (order !== 'ASC' && order !== 'DESC') {
     res.status(HttpStatus.BAD_REQUEST.code)
@@ -104,12 +104,12 @@ export const getPagedProductCategories = (req, res) => {
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No product categories found'));
         return;
       }
-      const page = req.param('pag') ? parseInt(req.param('pag'), 10) : 1;
-      const limit = req.param('limit') ? parseInt(req.param('limit'), 10) : 10;
-      if (isNaN(page) || isNaN(limit)) {
-        logger.error(`${req.method} - ${req.originalUrl}, the 'pag' and 'limit' parameters must be numbers`);
+      const page = Number(req.body.pag) || 1;
+      const limit = Number(req.body.limit) || 10;
+      if (limit < 1 || limit > 100) {
+        logger.error(`${req.method} - ${req.originalUrl}, invalid limit value`);
         res.status(HttpStatus.BAD_REQUEST.code)
-          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'The pag and limit parameters must be numbers'));
+          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid limit value'));
         return;
       }
       // Calculation for pagination parameters
@@ -261,41 +261,63 @@ export const createProductSubCat = (req, res) => {
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameters value, empty values are not allowed'));
     return;
   }
-  database.query(PRODUCTSUBCATEGORY_QUERY.CREATE_PRODUCTSUBCATEGORY, BODY_PARAMETERS, (error, results) => {
+  const product_cat_id = Number(BODY_PARAMETERS[1]) || null;
+  if (product_cat_id == null) {
+    logger.error(`${req.method} - ${req.originalUrl}, invalid parameters value, check the documentation`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameters value, check the documentation'));
+    return;
+  }
+  // Check if the product category exists
+  database.query(PRODUCTCATEGORY_QUERY.SELECT_PRODUCTCATEGORY, [product_cat_id], (error, results) => {
     if (error) {
-      if (error.errno == 1064) {
-        logger.error(`${req.method} - ${req.originalUrl}, invalid parameters value, check the documentation`);
-        res.status(HttpStatus.BAD_REQUEST.code)
-          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameters value, check the documentation'));
-        return;
-      }
-      if (error.errno == 1062) {
-        logger.error(`${req.method} - ${req.originalUrl}, Duplicate entry detected, object was not created`);
-        res.status(HttpStatus.BAD_REQUEST.code)
-          .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Duplicate entry detected, object was not created'));
-        return;
-      }
-      logger.error(`${req.method} - ${req.originalUrl}, error creating product subcategory: ${error}`);
-    } else {
-      if (!results) {
-        logger.error(`${req.method} - ${req.originalUrl}, error creating product subcategory: ${error}`);
-        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
-          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
-      } else {
-        const sub_cat = results[0][0];
-        logger.info(`${req.method} - ${req.originalUrl}, product subcategory created successfully`);
-        res.status(HttpStatus.CREATED.code)
-          .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, 'Product subcategory created successfully', { sub_cat }));
-      }
+      logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
+      return;
     }
+    if (!results[0]) {
+      logger.error(`${req.method} - ${req.originalUrl}, error: Product category not found`);
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Product category with id ${product_cat_id} was not found`));
+      return;
+    }
+    database.query(PRODUCTCATEGORY_QUERY.CREATE_PRODUCTSUBCATEGORY, BODY_PARAMETERS, (error, results) => {
+      if (error) {
+        if (error.errno == 1064) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid parameters value, check the documentation`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameters value, check the documentation'));
+          return;
+        }
+        if (error.errno == 1062) {
+          logger.error(`${req.method} - ${req.originalUrl}, Duplicate entry detected, object was not created`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Duplicate entry detected, object was not created'));
+          return;
+        }
+        logger.error(`${req.method} - ${req.originalUrl}, error creating product subcategory: ${error}`);
+      } else {
+        if (!results) {
+          logger.error(`${req.method} - ${req.originalUrl}, error creating product subcategory: ${error}`);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+            .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, error));
+        } else {
+          const sub_cat = results[0][0];
+          logger.info(`${req.method} - ${req.originalUrl}, product subcategory created successfully`);
+          res.status(HttpStatus.CREATED.code)
+            .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, 'Product subcategory created successfully', { sub_cat }));
+        }
+      }
+    });
   });
 };
 
 export const getProductSubCategory = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, getting product subcategory...`);
-  const product_sub_cat_id = req.params.sub_cat_id;
+  const product_sub_cat_id = req.params.id;
   // Search for the product subcategory
-  database.query(PRODUCTSUBCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
+  database.query(PRODUCTCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
     if (error) {
       logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
@@ -316,8 +338,8 @@ export const getProductSubCategory = (req, res) => {
 
 export const getPagedProductSubCats = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, getting paged product subcategories...`);
-  const parameter = req.param('parameter') ? req.param('parameter') : 'product_subcat_id';
-  const order = req.param('order') ? req.param('order') : 'ASC';
+  const parameter = req.body.parameter || 'product_subcat_id';
+  const order = req.body.order || 'ASC';
   // Checking order values
   if (order != 'ASC' && order != 'DESC') {
     logger.error(`${req.method} - ${req.originalUrl}, invalid order value, order must be ASC or DESC`);
@@ -343,12 +365,12 @@ export const getPagedProductSubCats = (req, res) => {
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Product subcategories not found'));
       } else {
-        const page = req.param('pag') ? parseInt(req.param('pag'), 10) : 1;
-        const limit = req.param('lim') ? parseInt(req.param('limit'), 10) : 10;
-        if (isNaN(page) || isNaN(limit)) {
-          logger.error(`${req.method} - ${req.originalUrl}, invalid pag or limit value, pag and limit must be numbers`);
+        const page = Number(req.body.pag) || 1;
+        const limit = Number(req.body.limit) || 10;
+        if (limit < 1 || limit > 100) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid limit value, limit must be between 1 and 100`);
           res.status(HttpStatus.BAD_REQUEST.code)
-            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid pag or limit value, pag and limit must be numbers'));
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid limit value, limit must be between 1 and 100'));
           return;
         }
         // Calculation for pagination parameters
@@ -408,8 +430,8 @@ export const updateProductSubCat = (req, res) => {
     return;
   }
   // Searching the product subcategory id
-  const product_sub_cat_id = req.params.sub_cat_id;
-  database.query(PRODUCTSUBCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
+  const product_sub_cat_id = req.params.id;
+  database.query(PRODUCTCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
     if (error) {
       logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
@@ -421,7 +443,7 @@ export const updateProductSubCat = (req, res) => {
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Product subcategory with id ${product_sub_cat_id} was not found`));
       } else {
         // Product subcategory found, then update it
-        database.query(PRODUCTSUBCATEGORY_QUERY.UPDATE_PRODUCTSUBCATEGORY, [product_sub_cat_id, ...BODY_PARAMETERS], (error, results) => {
+        database.query(PRODUCTCATEGORY_QUERY.UPDATE_PRODUCTSUBCATEGORY, [product_sub_cat_id, ...BODY_PARAMETERS], (error, results) => {
           if (error) {
             if (error.errno == 1064) {
               logger.error(`${req.method} - ${req.originalUrl}, error updating product subcategory: ${error}`);
@@ -449,9 +471,9 @@ export const updateProductSubCat = (req, res) => {
 
 export const deleteProductSubCat = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, deleting product subcategory...`);
-  const product_sub_cat_id = req.params.sub_cat_id;
+  const product_sub_cat_id = req.params.id;
   // Search for the product subcategory
-  database.query(PRODUCTSUBCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
+  database.query(PRODUCTCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
     if (error) {
       logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
@@ -463,7 +485,7 @@ export const deleteProductSubCat = (req, res) => {
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Product subcategory with id ${product_sub_cat_id} was not found`));
       } else {
         // Product subcategory found, then delete it
-        database.query(PRODUCTSUBCATEGORY_QUERY.DELETE_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
+        database.query(PRODUCTCATEGORY_QUERY.DELETE_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
           if (error) {
             logger.error(`${req.method} - ${req.originalUrl}, error: ${error}`);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
