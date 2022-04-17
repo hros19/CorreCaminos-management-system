@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha --timeout 25000",
     "start:dev": "NODE_ENV=dev nodemon src/index.js",
     "start:prod": "NODE_ENV=prod node src/index.js"
   },
