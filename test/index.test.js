@@ -1429,6 +1429,656 @@ if (app.enabled) {
       });
 
     }); // Ending of zone test...
+
+    describe("Testing Supplier Routes", () => {
+
+      describe("Test GET /supplier (valid)", () => {
+        it ("Should return success message with the suppliers", done => {
+          chai
+            .request(app)
+            .get("/supplier")
+            .send(
+              {
+                parameter: "supplier_id",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+        });
+      });
+
+      describe("Test GET /supplier (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/supplier")
+            .send(
+              {
+                parameter: "INVALID_PARAMETER",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+        });
+      });
+
+      describe("Test GET /supplier/:id (valid)", () => {
+        it ("Should return success message with the supplier", done => {
+          chai
+            .request(app)
+            .get("/supplier/1")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+        });
+      });
+
+      describe("Test GET /supplier/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/supplier/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+        });
+      });
+
+      describe("Test POST /supplier (valid)", () => {
+        it ("Should return success message with the supplier created", done => {
+          chai
+            .request(app)
+            .post("/supplier")
+            .send(
+              {
+                supplier_name: "Proveedor nuevo",
+                address: "Direccion nueva Av 1",
+                phone: "777897979",
+                email: "nuevoprov@mail.com",
+                have_delivery: "NO"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(201);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /supplier (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .post("/supplier")
+            .send(
+              {
+                supplier_name: "Hola"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /supplier/:id (valid)", () => {
+        it ("Should return success message with the supplier updated", done => {
+          chai
+            .request(app)
+            .put("/supplier/1")
+            .send(
+              {
+                supplier_name: "Proveedor actualizado",
+                address: "Direccion actualizada Av 1",
+                phone: "11111111",
+                email: "nuevoemail@actualizado.com",
+                have_delivery: "YES"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /supplier/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .put("/supplier/XD")
+            .send(
+              {
+                supplier_name: "Proveedor nuevo",
+                address: "Direccion actualizada Av 1",
+                phone: "11111111",
+                email: "nuevomail@mail.com",
+                have_delivery: "NO"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /supplier/:id (valid id)", () => {
+        it ("Should return success message with the supplier deleted", done => {
+          chai
+            .request(app)
+            .delete("/supplier/4")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /supplier/:id (invalid id)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .delete("/supplier/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /supplier/:id/products (valid)", () => {
+        it ("Should return success message with the products of the supplier", done => {
+          chai
+            .request(app)
+            .get("/supplier/1/products")
+            .send(
+              {
+                parameter: "product_id",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+          });
+      });
+
+      describe("Test GET /supplier/:id/products (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/supplier/XD/products")
+            .send(
+              {
+                parameter: "product_id",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /supplier/:id/orders (valid_ id)", () => {
+        it ("Should return success message with the orders of the supplier", done => {
+          chai
+            .request(app)
+            .get("/supplier/3/orders")
+            .send(
+              {
+                parameter: "order_date",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+          });
+      });
+
+      describe("Test GET /supplier/:id/orders (invalid id)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/supplier/XD/orders")
+            .send(
+              {
+                parameter: "order_date",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+    }); // Ending of supplier test...
+
+    describe("Test ProductCategory Routes", () => {
+
+      describe("Test GET /productCat (valid)", () => {
+        it ("Should return success message with the product categories", done => {
+          chai
+            .request(app)
+            .get("/productCat")
+            .send(
+              {
+                parameter: "product_cat_id",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+          });
+      });
+
+      describe("Test GET /productCat (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/productCat")
+            .send(
+              {
+                parameter: "XD",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /productCat/subCategory (valid)", () => {
+        it ("Should return success message with the subcategories of the product category", done => {
+          chai
+            .request(app)
+            .get("/productCat/subCategory")
+            .send(
+              {
+                parameter: "SubCategory_id",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+          });
+      });
+
+      describe("Test GET /productCat/subCategory (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/productCat/subCategory")
+            .send(
+              {
+                parameter: "XD",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /productCat/subCategory/:id (valid)", () => {
+        it ("Should return success message with the subcategory of the product category", done => {
+          chai
+            .request(app)
+            .get("/productCat/subCategory/1")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /productCat/subCategory/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/productCat/subCategory/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /productCat/:id (valid)", () => {
+        it ("Should return success message with the product category", done => {
+          chai
+            .request(app)
+            .get("/productCat/1")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /productCat/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/productCat/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /productCat (valid)", () => {
+        it ("Should return success message with the product category", done => {
+          chai
+            .request(app)
+            .post("/productCat")
+            .send(
+              {
+                product_cat_name: "Refrigerados"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(201);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /productCat (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .post("/productCat")
+            .send(
+              {
+                product_cat_name: ""
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /productCat/subCategory (valid)", () => {
+        it ("Should return success message with the subcategory of the product category", done => {
+          chai
+            .request(app)
+            .post("/productCat/subCategory")
+            .send(
+              {
+                subcategory_name: "Paletas frias",
+                product_cat_id: 1
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(201);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /productCat/subCategory (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .post("/productCat/subCategory")
+            .send(
+              {
+                subcategory_name: "Paletas calientes",
+                product_cat_id: 100000
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /productCat/subCategory/:id (valid)", () => {
+        it ("Should return success message with the subcategory of the product category", done => {
+          chai
+            .request(app)
+            .put("/productCat/subCategory/1")
+            .send(
+              {
+                subcategory_name: "Legumbres"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /productCat/subCategory/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .put("/productCat/subCategory/XD")
+            .send(
+              {
+                subcategory_name: "Legumbres"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /productCat/subCategory/:id (valid)", () => {
+        it ("Should return success message with the subcategory of the product category", done => {
+          chai
+            .request(app)
+            .delete("/productCat/subCategory/9")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /productCat/subCategory/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .delete("/productCat/subCategory/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /productCat/:id (valid)", () => {
+        it ("Should return success message with the product category", done => {
+          chai
+            .request(app)
+            .put("/productCat/4")
+            .send(
+              {
+                product_cat_name: "Congelados"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /productCat/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .put("/productCat/XD")
+            .send(
+              {
+                product_cat_name: "Congelados"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /productCat/:id (valid)", () => {
+        it ("Should return success message with the product category", done => {
+          chai
+            .request(app)
+            .delete("/productCat/4")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /productCat/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .delete("/productCat/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+    }); // Ending of product category test...
+
+    describe("Test of product routes", () => {
+
+      describe("Test GET /product (valid)", () => {
+        it ("Should return success message with the products", done => {
+          chai
+            .request(app)
+            .get("/product")
+            .send(
+              {
+                parameter: "product_id",
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+          });
+      });
+
+      describe("test GET /product (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/product")
+            .send(
+              {
+                parameter: "product_id",
+                order: "ASC",
+                pag: -20,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+    });
     
   }); // Ending of main test...
 }
