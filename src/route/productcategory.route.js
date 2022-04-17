@@ -6,22 +6,22 @@ const productCategoryRoutes = express.Router();
 
 // Product Category routes
 productCategoryRoutes.route('/')
-  .get(getPagedProductCategories) // Paginated
-  .post(createProductCategory);
-
-productCategoryRoutes.route('/:id')
-  .get(getProductCategory)
-  .put(updateProductCategory)
-  .delete(deleteProductCategory);
+  .get(getPagedProductCategories) // Tested
+  .post(createProductCategory); // Tested
 
 // Product Sub Category routes
 productCategoryRoutes.route('/subCategory')
-  .get(getPagedProductSubCats) // Paginated
-  .post(createProductSubCat);
+  .get(getPagedProductSubCats) // Tested
+  .post(createProductSubCat); // Tested
 
 productCategoryRoutes.route('/subCategory/:id')
-  .get(getProductSubCategory)
-  .put(updateProductSubCat)
-  .delete(deleteProductSubCat);
+  .get(getProductSubCategory) // Tested
+  .put(updateProductSubCat) // Tested
+  .delete(deleteProductSubCat);  // Tested
+
+productCategoryRoutes.route('/:id')
+  .get(getProductCategory) // Tested
+  .put(updateProductCategory) // Tested
+  .delete(deleteProductCategory); // Tested
 
 export default productCategoryRoutes;
