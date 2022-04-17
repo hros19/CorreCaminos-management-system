@@ -4,19 +4,19 @@ import { createSupplier, updateSupplier, deleteSupplier, getPagedSuppliers, getS
 const supplierRoutes = express.Router();
 
 supplierRoutes.route('/')
-  .get(getPagedSuppliers) // parameter, order, pag, limit
-  .post(createSupplier); // name, address, phone, email, haveDelivery (YES/NO)
+  .get(getPagedSuppliers) // tested
+  .post(createSupplier); // tested
 
 supplierRoutes.route('/:id')
-  .get(getSupplier)
-  .put(updateSupplier)
-  .delete(deleteSupplier);
+  .get(getSupplier) // tested
+  .put(updateSupplier) // tested
+  .delete(deleteSupplier); // tested
 
 supplierRoutes.route('/:id/products')
-  .get(getProductsBySupplier);
+  .get(getProductsBySupplier); // tested
 
 supplierRoutes.route('/:id/orders')
-  .get(getOrdersBySupplier);
+  .get(getOrdersBySupplier); // tested
 
 
 export default supplierRoutes;
