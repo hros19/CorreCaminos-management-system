@@ -248,19 +248,21 @@ export const createRoute = (req, res) => {
   const BODY_PARAMETERS = Object.values(req.body);
   // Checking quantity of parameters
   if (BODY_PARAMETERS.length != 2) {
+    logger.error(`${req.method} ${req.originalUrl}, invalid number of parameters`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
     return;
   }
   // Checking non empty parameters
   if (BODY_PARAMETERS.includes('', "")) {
+    logger.error(`${req.method}, ${req.originalUrl}, invalid parameters`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty parameters are not allowed`));
     return;
   }
   database.query(ZONE_QUERY.CREATE_ROUTE, BODY_PARAMETERS, (error, results) => {
     if (error) {
-      console.log(error);
+      logger.error(`${req.method}, ${req.originalUrl}, error creating route: ${error}`);
       if (error.errno == 1064) {
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `${error.errno}: Invalid parameter values, check documentation`));
@@ -276,10 +278,12 @@ export const createRoute = (req, res) => {
       return;
     } else {
       if (!results) {
+        logger.error(`${req.method}, ${req.originalUrl}, error creating route: route not created`);
         res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
           .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `The vehicle was not registered`));
         return;
       } else {
+        logger.info(`${req.method}, ${req.originalUrl}, route created`);
         const route = results[0][0];
         res.status(HttpStatus.CREATED.code)
           .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Route registered sucessfully`, { route }));
@@ -293,15 +297,18 @@ export const getRoute = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, retrieving route...`);
   database.query(ZONE_QUERY.SELECT_ROUTE, [req.params.route_id], (error, results) => {
     if (error) {
+      logger.error(`${req.method} ${req.originalUrl}, error retrieving route: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
       return;
     } else {
       if (!results[0]) {
+        logger.error(`${req.method} ${req.originalUrl}, error retrieving route: route not found`);
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with id ${req.params.route_id} was not found`));
         return;
       } else {
+        logger.info(`${req.method} ${req.originalUrl}, route retrieved`);
         res.status(HttpStatus.OK.code)
           .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Route found`, results[0]));
         return;
@@ -346,11 +353,13 @@ export const getPagedRoutes = (req, res) => {
         let numOfResults = results.length;
         let numOfPages = Math.ceil(numOfResults / limit);
         if (page > numOfPages) {
+          logger.error(`${req.method} ${req.originalUrl}, invalid page value`);
           res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Selected page exceeds total pages. The total pages is ${numOfPages} and the page ${page} was requested`));
           return;
         }
         if (page < 1) {
+          logger.error(`${req.method} ${req.originalUrl}, invalid page value`);
           res.status(HttpStatus.BAD_REQUEST.code)
             .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page requested (${page}), must be 1 or higher`));
           return;
@@ -365,9 +374,11 @@ export const getPagedRoutes = (req, res) => {
             return;
           } else {
             if (!results[0]) {
+              logger.error(`${req.method} ${req.originalUrl}, error retrieving routes: no routes found: ${error}`);
               res.status(HttpStatus.NOT_FOUND.code)
                 .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `No routes found`));
             } else {
+              logger.info(`${req.method} ${req.originalUrl}, routes found`);
               res.status(HttpStatus.OK.code)
               .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Routes retrieved`, { data: results[0], page, numOfPages }));
             }
@@ -383,31 +394,34 @@ export const updateRoute = (req, res) => {
   const BODY_PARAMETERS = Object.values(req.body);
   // Checking quantity of parameters
   if (BODY_PARAMETERS.length != 2) {
+    logger.error(`${req.method} ${req.originalUrl}, error updating route: invalid parameters`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid number of parameters`));
     return;
   }
   // Checking empty parameters
   if (BODY_PARAMETERS.includes('', "")) {
+    logger.error(`${req.method} ${req.originalUrl}, error updating route: empty parameters`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Empty parameters are not allowed`));
     return;
   }
   database.query(ZONE_QUERY.SELECT_ROUTE, [req.params.route_id], (error, results) => {
     if (error) {
-      console.log(error);
+      logger.error(`${req.method} ${req.originalUrl}, error updating route: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
       return;
     } else {
       if (!results[0]) {
+        logger.error(`${req.method} ${req.originalUrl}, error updating route: no route found`);
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with the id ${req.params.route_id} was not found`));
         return;
       } else {
         database.query(ZONE_QUERY.UPDATE_ROUTE, [req.params.route_id, ...BODY_PARAMETERS], (error, results) => {
           if (error) {
-            console.log(error);
+            logger.error(`${req.method} ${req.originalUrl}, error updating route: ${error}`);
             if (error.errno == 1064) {
               res.status(HttpStatus.BAD_REQUEST.code)
                 .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid parameter values, check documentation`));
@@ -422,6 +436,7 @@ export const updateRoute = (req, res) => {
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
             return;
           } else {
+            logger.info(`${req.method} ${req.originalUrl}, route updated`);
             res.status(HttpStatus.OK.code)
               .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Route updated successfully`, { id: req.params.route_id, ...req.body }));
             return;
@@ -436,22 +451,27 @@ export const deleteRoute = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, deleting route...`);
   database.query(ZONE_QUERY.SELECT_ROUTE, [req.params.route_id], (error, results) => {
     if (error) {
+      logger.error(`${req.method} ${req.originalUrl}, error retrieving route: ${error}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
     } else {
       if (!results[0]) {
+        logger.error(`${req.method} ${req.originalUrl}, error deleting route: ${error}`);
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with the id ${req.params.route_id} was not found`));
       } else {
         database.query(ZONE_QUERY.DELETE_ROUTE, [req.params.route_id], (error, results) => {
           if (error) {
+            logger.error(`${req.method} ${req.originalUrl}, error deleting route: ${error}`);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
           } else {
             if (results.affectedRows > 0) {
+              logger.info(`${req.method} ${req.originalUrl}, route deleted successfully`);
               res.status(HttpStatus.OK.code)
                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `The route with the id ${req.params.route_id} was deleted successfully`));
             } else {
+              logger.error(`${req.method} ${req.originalUrl}, error deleting route: ${error}`);
               res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
                .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior`));
             }
@@ -470,29 +490,31 @@ export const createZoneXRoute = (req, res) => {
   // Search if zone_id exists
   database.query(ZONE_QUERY.SELECT_ZONE, [zone_id], (error, results) => {
     if (error) {
-      console.log(error);
+      logger.error(`${req.method} ${req.originalUrl}, error searching zone with id ${zone_id}`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
     } else {
       if (!results[0]) {
+        logger.error(`${req.method} ${req.originalUrl}, zone with id ${zone_id} not found`);
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The zone with id ${zone_id} was not found`));
       } else {
         // Zone found, search route_id
         database.query(ZONE_QUERY.SELECT_ROUTE, [route_id], (error, results) => {
           if (error) {
-            console.log(error);
+            logger.error(`${req.method} ${req.originalUrl}, error searching route with id ${route_id}`);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
           } else {
             if (!results[0]) {
+              logger.error(`${req.method} ${req.originalUrl}, route with id ${route_id} not found`);
               res.status(HttpStatus.NOT_FOUND.code)
                .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The zone with id ${zone_id} was not found`));
             } else {
               // route_id also exists, create the relation
               database.query(ZONE_QUERY.CREATE_ZONEXROUTE, [zone_id, route_id], (error, results) => {
                 if (error) {
-                  console.log(error);
+                  logger.error(`${req.method} ${req.originalUrl}, error creating association between zone with id ${zone_id} and route with id ${route_id}`);
                   if (error.errno == 1064) {
                     res.status(HttpStatus.BAD_REQUEST.code)
                       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `${error.errno} Invalid parameter values, check documentation`));
@@ -507,6 +529,7 @@ export const createZoneXRoute = (req, res) => {
                     .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
                   return;
                 } else {
+                  logger.info(`${req.method} ${req.originalUrl}, association between zone with id ${zone_id} and route with id ${route_id} created successfully`);
                   res.status(HttpStatus.OK.code)
                     .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Asociation between zone with id ${zone_id} and route with id ${route_id} was sucessfull`));
                 }
@@ -574,9 +597,11 @@ export const getPagedZoneRoutes = (req, res) => {
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during the query execution`));
           } else {
             if (!results[0]) {
+              logger.error(`${req.method} ${req.originalUrl}, no relationships between zones and routes found`);
               res.status(HttpStatus.NOT_FOUND.code)
                 .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The zone with id ${req.params.id} was not found`));
             } else {
+              logger.info(`${req.method} ${req.originalUrl}, relationships between zones and routes found`);
               res.status(HttpStatus.OK.code)
                 .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Routes retrieved`, { data: results[0], page, numOfPages }));
               return;
@@ -595,36 +620,40 @@ export const deleteZoneXRoute = (req, res) => {
   // Check if the zone id exists
   database.query(ZONE_QUERY.SELECT_ROUTE, [zone_id], (error, results) => {
     if (error) {
-      console.log(error);
+      logger.error(`${req.method} ${req.originalUrl}, unexpected behavior during query execution`);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during the query execution`));
     } else {
       if (!results[0]) {
+        logger.error(`${req.method} ${req.originalUrl}, zone with id ${zone_id} not found`);
         res.status(HttpStatus.NOT_FOUND.code)
         .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The zone with the id ${zone_id} was not found`));
       } else {
         // Zone found, check if route exists too
         database.query(ZONE_QUERY.SELECT_ROUTE, [route_id], (error, results) => {
           if (error) {
-            console.log(error);
+            logger.error(`${req.method} ${req.originalUrl}, unexpected behavior during query execution`);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
               .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
           } else {
             if (!results[0]) {
+              logger.error(`${req.method} ${req.originalUrl}, route with id ${route_id} not found`);
               res.status(HttpStatus.NOT_FOUND.code)
                 .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `The route with the id ${route_id} was not found`));
             } else {
               // Route found, then delete the zone and route relation (if exists)
               database.query(ZONE_QUERY.DELETE_ZONEXROUTE, [zone_id, route_id], (error, results) => {
                 if (error) {
-                  console.log(error);
+                  logger.error(`${req.method} ${req.originalUrl}, unexpected behavior during query execution`);
                   res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
                     .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected behavior during query execution`));
                 } else {
                   if (results.affectedRows > 0) {
+                    logger.info(`${req.method} ${req.originalUrl}, zone and route relation deleted`);
                     res.status(HttpStatus.OK.code)
                       .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `The relation between the zone with id ${zone_id} and the route with id ${route_id} was deleted successfully`));
                   } else {
+                    logger.error(`${req.method} ${req.originalUrl}, no relationship between zone and route found`);
                     res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
                       .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Unexpected error, relation not deleted`))
                   }
