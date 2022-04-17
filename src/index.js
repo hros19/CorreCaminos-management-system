@@ -31,8 +31,8 @@ app.use('/jobTitle', jobtitleRoutes); // tested
 app.use('/driver', driverRoutes); // tested
 app.use('/businessType', businesstypeRoute); // tested
 app.use('/zone', zoneRoutes); // tested
-app.use('/supplier', supplierRoutes);
-app.use('/productCat', productcategoryRoutes);
+app.use('/supplier', supplierRoutes); // tested
+app.use('/productCat', productcategoryRoutes); // tested
 app.use('/product', productRoutes);
 app.use('/stock', businessStockRoutes);
 app.use('/delivery', deliveryRoutes);
