@@ -2122,3 +2122,7 @@ CALL create_clientxdevday(5, 5); -- Delivery on Fridays.
 CALL create_clientxdevday(6, 3); -- Delivery on Wednesdays.
 CALL create_clientxdevday(6, 7); -- and Sundays.
 
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CALL create_supOrder(3);
+CALL create_supOrdDet(1, 12, 5000);
+CALL create_supOrdDet(1, 11, 1000);
