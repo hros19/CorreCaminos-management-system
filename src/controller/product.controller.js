@@ -28,9 +28,9 @@ export const createProduct = (req, res) => {
     return;
   }
   // We need to get 3 obligatory parameters
-  const supplier_id = req.param('supplier_id') ? req.param('supplier_id') : null;
-  const product_sub_cat_id = req.param('product_sub_cat_id') ? req.param('product_sub_cat_id') : null;
-  const is_available = req.param('is_available') ? req.param('is_available').toUpperCase() : null;
+  const supplier_id = req.body.supplier_id || null;
+  const product_sub_cat_id = req.body.product_subcat_id ||  null;
+  const is_available = req.body.is_available.toUpperCase() || null;
   // Check if there is some null parameter
   if (supplier_id === null || product_sub_cat_id === null || is_available === null) {
     logger.error(`${req.method} - ${req.originalUrl}, invalid parameter value, parameters (supplier_id, product_sub_cat_id, is_available) cannot be null`);
@@ -138,8 +138,8 @@ export const getProduct = (req, res) => {
 
 export const getPagedProducts = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, getting paged products...`);
-  const parameter = req.param('parameter') ? req.param('parameter') : 'product_id';
-  const order = req.param('order') ? req.param('order') : 'ASC';
+  const parameter = req.body.parameter || 'product_id';
+  const order = req.body.order || 'ASC';
   // Checking order values
   if (order !== 'ASC' && order !== 'DESC') {
     logger.error(`${req.method} - ${req.originalUrl}, invalid order value, must be ASC or DESC`);
@@ -147,6 +147,7 @@ export const getPagedProducts = (req, res) => {
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid order value, must be ASC or DESC'));
     return;
   }
+  logger.info(`>>> 1......`);
   // Checking parameter values
   if (!PARAMETER_VALUES.includes(parameter)) {
     logger.error(`${req.method} - ${req.originalUrl}, invalid parameter value, must be one of ${PARAMETER_VALUES}`);
@@ -176,8 +177,8 @@ export const updateProduct = (req, res) => {
   }
   // Check obligatory parameters
   const product_id = req.params.id;
-  const product_sub_cat_id = req.param('product_sub_cat_id') ? req.param('product_sub_cat_id') : null;
-  const is_available = req.param('is_available') ? req.param('is_available').toUpperCase() : null;
+  const product_sub_cat_id = req.body.product_subcat_id || null;
+  const is_available = req.body.is_available.toUpperCase() || 'YES';
   // Check if there is any obligatory parameter is null
   if (product_id === null || product_sub_cat_id === null || is_available === null) {
     logger.error(`${req.method} - ${req.originalUrl}, invalid parameter values, parameters (product_id, product_sub_cat_id, is_available) are obligatory`);
