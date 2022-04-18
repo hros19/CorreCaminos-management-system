@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "mocha --timeout 25000",
+    "test": "mocha --timeout 45000",
     "start:dev": "NODE_ENV=dev nodemon src/index.js",
     "start:prod": "NODE_ENV=prod node src/index.js"
   },
@@ -21,7 +21,7 @@
     "Express",
     "Cors"
   ],
-  "author": "Hansol Antay, Benjamin Johnson",
+  "author": "Hansol Antay",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/hros19/CorreCaminos-management-system/issues"
