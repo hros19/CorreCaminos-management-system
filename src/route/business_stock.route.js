@@ -5,14 +5,13 @@ import { fillProductsInStock, unregProductInStock, deleteProductInStock } from '
 const businessStockRoutes = express.Router();
 
 businessStockRoutes.route('/')
-  .get(getPagedProductsInStock) // Paginated
-  .post(fillProductsInStock); // { product_id, amount }
+  .get(getPagedProductsInStock) // Tested
+  .post(fillProductsInStock); // Tested
 
 businessStockRoutes.route('/:id')
-  .get(getProdInStock)
-  .delete(deleteProductInStock)
-  .put(unregProductInStock)
-  .post(registerProductInStock); // { product_id, amount }
-
+  .get(getProdInStock) // Tested
+  .delete(deleteProductInStock) // Tested
+  .put(unregProductInStock) // Tested
+  .post(registerProductInStock); // Tested
 
 export default businessStockRoutes;
