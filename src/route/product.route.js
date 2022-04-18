@@ -4,12 +4,12 @@ import { createProduct, getPagedProducts, getProduct, updateProduct, deleteProdu
 const productRoutes = express.Router();
 
 productRoutes.route('/')
-  .get(getPagedProducts) // Paginated
-  .post(createProduct);
+  .get(getPagedProducts) // Tested
+  .post(createProduct); // Tested
 
 productRoutes.route('/:id')
-  .get(getProduct)
-  .put(updateProduct)
-  .delete(deleteProduct);
+  .get(getProduct) // Tested
+  .put(updateProduct) // Tested
+  .delete(deleteProduct); // Tested
 
 export default productRoutes;
