@@ -520,11 +520,11 @@ END $$
 PROCEDURE: getp_dev_intervals
 DESCRIPTION: Get all the delivery intervals with pagination parameters.
 */
-CREATE PROCEDURE getp_dev_intervals(IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
+CREATE PROCEDURE getp_dev_intervals(IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
   SET @strQuery = CONCAT('SELECT * FROM DeliveryInterval ',
-												 'ORDER BY dev_interval_name ', pOrder, ' ', 
+												 'ORDER BY ', pParameter , ' ', pOrder, ' ', 
 												 'LIMIT ', pStart, ', ', pElemPerPage);
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
@@ -1000,6 +1000,7 @@ CREATE TABLE Product (
   product_cat_id INT NOT NULL,
   product_subcat_id INT NOT NULL,
   is_available VARCHAR(20) NOT NULL DEFAULT 'YES',
+	price FLOAT NOT NULL,
   CONSTRAINT PK_Product
 		PRIMARY KEY (product_id),
 	CONSTRAINT FK_Product_SupId
@@ -1025,14 +1026,14 @@ PROCEDURE create_product
 DESCRIPTION: Creates a new product on the database.
 */
 CREATE PROCEDURE create_product(IN pProdName VARCHAR(255), IN pSupplierId INT, IN pSubCatId INT,
-																IN pIsAvailable VARCHAR(10))
+																IN pIsAvailable VARCHAR(10), IN pPrice FLOAT)
 BEGIN
 	SET @category_id := get_subcat_cat(pSubCatId);
   IF (@category_id IS NULL)
 		THEN SELECT 'No subcategory with that id' AS 'Error';
 	ELSE
-		INSERT INTO Product (product_name, supplier_id, product_cat_id, product_subcat_id, is_available)
-		VALUES (pProdName, pSupplierId, @category_id, pSubCatId, pIsAvailable);
+		INSERT INTO Product (product_name, supplier_id, product_cat_id, product_subcat_id, is_available, price)
+		VALUES (pProdName, pSupplierId, @category_id, pSubCatId, pIsAvailable, pPrice);
 		SET @PRODUCT_ID = LAST_INSERT_ID();
 		SELECT * FROM Product WHERE product_id = @PRODUCT_ID;
   END IF;
@@ -1056,7 +1057,7 @@ END $$
 PROCEDURE: upd_product
 DESCRIPTION: Update an existing product
 */
-CREATE PROCEDURE upd_product(IN pProductId INT, IN pProductName VARCHAR(255), IN pSubCatId INT, IN pIsAvailable VARCHAR(255))
+CREATE PROCEDURE upd_product(IN pProductId INT, IN pProductName VARCHAR(255), IN pSubCatId INT, IN pIsAvailable VARCHAR(255), IN pPrice FLOAT)
 BEGIN
 	SET @category_id := get_subcat_cat(pSubCatId);
   IF (@category_id IS NULL)
@@ -1064,7 +1065,7 @@ BEGIN
 	ELSE
 		UPDATE Product
     SET product_name = pProductName, product_cat_id = @category_id, product_subcat_id = pSubCatId,
-				is_available = pIsAvailable
+				is_available = pIsAvailable, price = pPrice
 		WHERE product_id = pProductId;
   END IF;
 END $$
@@ -1076,7 +1077,7 @@ DESCRIPTION: Get all the products of a supplier.
 CREATE PROCEDURE getp_sup_products(IN pSupplierId INT, IN pParameter VARCHAR(255), IN pOrder VARCHAR(255), IN pStart INT, IN pElemPerPage INT)
 BEGIN
 	DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT prod.product_id, prod.product_name, psc.product_subcat_id, ', 
+  SET @strQuery = CONCAT('SELECT prod.product_id, prod.product_name, prod.price, psc.product_subcat_id, ', 
 												 'psc.product_subcat_name, sup.supplier_id, sup.supplier_name, prod.is_available ',
 												 'FROM Product prod ',
 												 'INNER JOIN Supplier sup ON sup.supplier_id = prod.supplier_id ',
@@ -1095,7 +1096,7 @@ DESCRIPTION: Get a product by an specific supplier without pagination.
 CREATE PROCEDURE get_sup_products(IN pSupplierId INT)
 BEGIN
   DECLARE strQuery VARCHAR(255);
-  SET @strQuery = CONCAT('SELECT prod.product_id, prod.product_name, psc.product_subcat_id, ', 
+  SET @strQuery = CONCAT('SELECT prod.product_id, prod.product_name, prod.price, psc.product_subcat_id, ', 
                          'psc.product_subcat_name, sup.supplier_id, sup.supplier_name, prod.is_available ',
                          'FROM Product prod ',
                          'INNER JOIN Supplier sup ON sup.supplier_id = prod.supplier_id ',
@@ -1575,11 +1576,23 @@ DESCRIPTION: Get in a string all the delivery days of a specific client.
 CREATE FUNCTION getstr_ClnDevDays(pClientId INT)
 	RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
-set @v := (SELECT GROUP_CONCAT(dev_day_name) AS "days" FROM CLIENT
+set @v := (SELECT GROUP_CONCAT(dev_day_name) AS "days" FROM Client
 		INNER JOIN ClientXDevDay cxdv ON cxdv.client_id = pClientId
 		INNER JOIN DeliveryDay devd ON devd.dev_day_id = cxdv.dev_day_id
 		WHERE Client.client_id = pClientId);
 RETURN @v;
+END $$
+
+/*
+PROCEDURE: get_lastOrderOfClt
+DESCRIPTION: Get the last order of a client.
+*/
+CREATE PROCEDURE get_lastOrderOfClt(IN pClientId INT)
+BEGIN
+	SELECT order_delivery_date FROM ClientOrder
+	WHERE client_id = pClientId
+	ORDER BY order_delivery_date DESC
+	LIMIT 1;
 END $$
 
 /*
@@ -1605,7 +1618,7 @@ BEGIN
         INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
-        SELECT @ID; --  We return the id for asociated the order details.
+        SELECT @ID AS ID; --  We return the id for asociated the order details.
 			-- Previous deliveries were founded. We need to follow the last delivery date.
 			ELSE
 				-- Selecting the last date registered for a delivery.
@@ -1617,7 +1630,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
 				-- If is the last delivery is today (not aplicable, asuming the truck content is not 'reorganizable'
 				ELSEIF ((CURRENT_DATE = @vSelecDate) = 1) THEN
 					-- If this happens, we need to move to the next week.
@@ -1625,14 +1638,14 @@ BEGIN
           INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
 				-- If the last delivery is in the past. We just take the next dev_day.
 				ELSE
 					SET @vSelecDate = getNextDateOf(@vDayOne);
           INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
         END IF;
       END IF;
 		-- Two days to consider per week.
@@ -1643,7 +1656,7 @@ BEGIN
         INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
-        SELECT @ID; --  We return the id for asociated the order details.
+        SELECT @ID AS ID; --  We return the id for asociated the order details.
 			-- Previous deliveries were found. Need to follow the last delivery date.
       ELSE
 				-- Selecting the last date registered for a delivery.
@@ -1659,7 +1672,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
 				-- If the last delivery was on the past or is the current day we just
         -- select the next delivery day.
 				ELSE
@@ -1668,7 +1681,7 @@ BEGIN
           INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
 				END IF;
       END IF;
     END IF; -- TWO_PER_WEEK, 1 DAY OR 2 DAYS.
@@ -1681,13 +1694,13 @@ BEGIN
     INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 		VALUES (pClientId, pStatus, @vSelecDay);
 		SET @ID = LAST_INSERT_ID();
-		SELECT @ID; --  We return the id for asociate the order details.
+		SELECT @ID AS ID; --  We return the id for asociate the order details.
 	ELSEIF (@vDevInterval = 'DAILY') THEN
 		SET @vSelecDay = CURRENT_DATE + 1;
     INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 		VALUES (pClientId, pStatus, @vSelecDay);
 		SET @ID = LAST_INSERT_ID();
-    SELECT @ID; --  We return the id for asociate the order details.
+    SELECT @ID AS ID; --  We return the id for asociate the order details.
 	ELSEIF (@vDevInterval = 'BIWEEKLY') THEN
 		SET @vDay = SUBSTRING_INDEX(@vDays, ",", 1);
 		-- If there are no previous deliveries, select the next day.
@@ -1696,7 +1709,7 @@ BEGIN
         INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
         VALUES (pClientId, pStatus, @vSelecDate);
         SET @ID = LAST_INSERT_ID();
-        SELECT @ID; --  We return the id for asociated the order details.
+        SELECT @ID AS ID; --  We return the id for asociated the order details.
 		-- Previous deliveries were founded. We need to follow the last delivery date.
     ELSE
 			-- Selecting the last date registered for a delivery.
@@ -1708,7 +1721,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
 			-- If is the last delivery is today (not aplicable, asuming the truck content is not 'reorganizable'
 			ELSEIF ((CURRENT_DATE = @vSelecDate) = 1) THEN
 				-- If this happens, we need to move to the next two weeks.
@@ -1716,7 +1729,7 @@ BEGIN
 				INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 				VALUES (pClientId, pStatus, @vSelecDate);
 				SET @ID = LAST_INSERT_ID();
-				SELECT @ID; --  We return the id for asociate the order details.
+				SELECT @ID AS ID; --  We return the id for asociate the order details.
 			-- If the last delivery is in the past. We need to check the last date.
       ELSE
 				-- If the last delivery was 14 days ago, sadly, the order would be send
@@ -1726,7 +1739,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociate the order details.
+					SELECT @ID AS ID; --  We return the id for asociate the order details.
 				-- If was a long time ago that the Client request some product, just
         -- send it the next day of the delivery for that Client.
 				ELSEIF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) > 7 ) = 1 ) THEN
@@ -1734,7 +1747,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociated the order details.
+					SELECT @ID AS ID; --  We return the id for asociated the order details.
 				-- If the last delivery was exactly one week ago, that saids that the next delivery
         -- is on the next week.
 				ELSEIF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) = 7 ) = 1) THEN
@@ -1742,7 +1755,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociated the order details.
+					SELECT @ID AS ID; --  We return the id for asociated the order details.
 				-- If the last delivery was less than a week ago, we just use that value and
         -- select the date two weeks further
 				ELSEIF ( (DATEDIFF(CURRENT_DATE, @vSelecDate) < 7 ) = 1) THEN
@@ -1750,7 +1763,7 @@ BEGIN
 					INSERT INTO ClientOrder(client_id, order_status, order_delivery_date)
 					VALUES (pClientId, pStatus, @vSelecDate);
 					SET @ID = LAST_INSERT_ID();
-					SELECT @ID; --  We return the id for asociated the order details.
+					SELECT @ID AS ID; --  We return the id for asociated the order details.
         END IF;
 			END IF;
     END IF;
@@ -1895,6 +1908,19 @@ BEGIN
 END $$
 
 /*
+PROCEDURE get_cltOrdDetOf
+DESCRIPTION: Returns all the client order details.
+*/
+CREATE PROCEDURE get_cltOrdDetOf(IN pClientOrderId INT)
+BEGIN
+	DECLARE strQuery VARCHAR(255);
+	SET @strQuery = CONCAT('SELECT * FROM ClientOrderDetail ',
+												 'WHERE client_order_id = ', pClientOrderId);
+	PREPARE myQuery FROM @strQuery;
+	EXECUTE myQuery;
+END $$
+
+/*
 PROCEDURE getp_cltOrdDetOf
 DESCRIPTION: Give all the details of the order of a client with pagination.
 */
@@ -1936,7 +1962,7 @@ BEGIN
   IF (@readiness = 'Not Ready') THEN
     INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
     VALUES (pClientOrderId, pProductId, pQuantity);
-    CALL upd_clientOrder(pClientOrderId, 'pendiente');
+    CALL upd_clientOrder(pClientOrderId, 'PENDIENTE');
 	ELSE
 		INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
     VALUES (pClientOrderId, pProductId, pQuantity);
@@ -1955,7 +1981,7 @@ BEGIN
   DECLARE cursor1 CURSOR FOR SELECT product_id, quantity FROM ClientOrderDetail WHERE client_order_id = pClientOrderId;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET var_final = 1;
 	SET @ordStatus = get_ordStatus(pClientOrderId);
-  IF (@ordStatus = 'en despacho') THEN
+  IF (@ordStatus = 'EN DESPACHO') THEN
 		OPEN cursor1;
     bucle: LOOP
 			FETCH cursor1 INTO var_product_id, var_quantity;
@@ -2065,23 +2091,23 @@ CALL create_prodSubCat('Jugo', 3);
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- Init values for BusinessStock and Product
-CALL create_product('Leche Entera 1L', 1, 4, 'NO');
-CALL create_product('Leche Deslactosada 1L', 1, 4, 'YES');
-CALL create_product('Yogurt Arandano 250ml', 1, 5, 'YES');
-CALL create_product('Yogurt Fresa 250ml', 1, 5, 'YES');
-CALL create_product('Pilsen TR 250ml', 1, 7, 'YES');
-CALL create_product('Heineken LT 333ml', 1, 7, 'YES');
-CALL create_product('Imperial', 1, 7, 'NO');
-CALL create_product('Coca Cola 355ml', 2, 6, 'YES');
-CALL create_product('Fresca 600ml', 2, 6, 'YES');
-CALL create_product('Arroz Integral 1kg', 3, 1, 'NO');
-CALL create_product('Arroz Precocido 1kg', 3, 1, 'YES');
-CALL create_product('Frijoles Rojos 800g', 3, 2, 'YES');
-CALL create_product('Frijoles Negros 500g', 3, 2, 'YES');
-CALL create_product('Harina Integral 300g', 3, 3, 'YES');
-CALL create_product('Harina Reposteria 300g', 3, 3, 'YES');
+CALL create_product('Leche Entera 1L', 1, 4, 'NO', 1200);
+CALL create_product('Leche Deslactosada 1L', 1, 4, 'YES', 1500);
+CALL create_product('Yogurt Arandano 250ml', 1, 5, 'YES', 750);
+CALL create_product('Yogurt Fresa 250ml', 1, 5, 'YES', 750);
+CALL create_product('Pilsen TR 250ml', 1, 7, 'YES', 1500);
+CALL create_product('Heineken LT 333ml', 1, 7, 'YES', 2000);
+CALL create_product('Imperial', 1, 7, 'NO', 1000);
+CALL create_product('Coca Cola 355ml', 2, 6, 'YES', 600);
+CALL create_product('Fresca 600ml', 2, 6, 'YES', 1000);
+CALL create_product('Arroz Integral 1kg', 3, 1, 'NO', 2500);
+CALL create_product('Arroz Precocido 1kg', 3, 1, 'YES', 2000);
+CALL create_product('Frijoles Rojos 800g', 3, 2, 'YES', 1500);
+CALL create_product('Frijoles Negros 500g', 3, 2, 'YES', 1800);
+CALL create_product('Harina Integral 300g', 3, 3, 'YES', 5000);
+CALL create_product('Harina Reposteria 300g', 3, 3, 'YES', 10000);
+CALL create_product('Harina Premium 100g', 3, 3, 'YES', 100000);
 
-CALL reg_prod_bussStock(1, 10000);
 CALL reg_prod_bussStock(2, 500);
 CALL reg_prod_bussStock(3, 8000);
 CALL reg_prod_bussStock(4, 450);
@@ -2109,7 +2135,7 @@ CALL create_client(2, 4, 5, 'Restaurante A', 'Dolores Brenes', '82828282', 'dolo
 									 'A la par del estadio nacional', 56.24, 5.3);
 CALL create_client(2, 1, 5, 'Restaurante B', 'Adriana Rodriguez', '89707070', 'adri@mail.com',
 									 'Continuo a la musmanni', 86.65, 24.7);
-CALL create_client(3, 2, 4, 'Automercado A', 'Martin Caceres', '82009881', 'martin@mail.com',
+CALL create_client(3, 3, 4, 'Automercado A', 'Martin Caceres', '82009881', 'martin@mail.com',
 									 'Frente al teatrio de bellas artes', -11.64, 10.46);
 CALL create_client(3, 3, 2, 'Supermercado A', 'Alan Mena', '82129456', 'alan@mail.com',
 									 'Diagonal a mogambos', 44.56, -27.2); 
@@ -2126,3 +2152,42 @@ CALL create_clientxdevday(6, 7); -- and Sundays.
 CALL create_supOrder(3);
 CALL create_supOrdDet(1, 12, 5000);
 CALL create_supOrdDet(1, 11, 1000);
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- client_order_id INT NOT NULL AUTO_INCREMENT,
+--   client_id INT NOT NULL,
+--   order_status VARCHAR(255) NOT NULL,
+--   order_date DATE DEFAULT (CURRENT_DATE),
+--   order_delivery_date DATE DEFAULT NULL,
+
+
+-- client_order_id INT NOT NULL,
+--   product_id INT NOT NULL,
+--   quantity INT NOT NULL,
+
+INSERT INTO ClientOrder (client_id, order_status, order_date, order_delivery_date)
+VALUES (2, 'COMPLETADO', '2022-01-01', '2022-01-04');
+
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (1, 4, 400);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (1, 5, 500);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (1, 6, 102);
+
+INSERT INTO ClientOrder (client_id, order_status, order_date, order_delivery_date)
+VALUES (3, 'COMPLETADO', '2022-01-01', '2022-01-02');
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 1, 500);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 2, 50000);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 4, 760);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 5, 20000);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 7, 6000);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 9, 3000);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (2, 10, 42000);
