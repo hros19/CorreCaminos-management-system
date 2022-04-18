@@ -148,6 +148,7 @@ export const getPagedVehicles = (req, res) => {
       const limit = Number(req.body.limit) || 10;
       // Validation page parameters
       if (limit < 1 || limit > 100) {
+        logger.error(`${req.method} ${req.originalUrl}, error retrieving vehicles: invalid limit value`);
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status,
                              `Invalid values for pagination (check 'pag' and 'limit' values in the request)`));
@@ -162,6 +163,7 @@ export const getPagedVehicles = (req, res) => {
         return;
       }
       if (page < 1) {
+        logger.error(`${req.method} ${req.originalUrl}, error retrieving vehicles: invalid page value`);
         res.status(HttpStatus.BAD_REQUEST.code)
           .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `Invalid page requested (${page}), must be 1 or higher`));
         return;
