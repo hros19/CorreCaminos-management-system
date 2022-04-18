@@ -13,8 +13,8 @@ const PARAMETER_VALUES = [
 
 export const getPagedProductsInStock = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, retrieving products in stock...`);
-  const parameter = req.param('parameter') || 'product_id';
-  const order = req.param('order') || 'ASC';
+  const parameter = req.body.parameter || 'product_id';
+  const order = req.body.order || 'ASC';
   // Check order value
   if (order !== 'ASC' && order !== 'DESC') {
     logger.error(`${req.method} - ${req.originalUrl}, invalid order value: ${order}`);
@@ -40,13 +40,13 @@ export const getPagedProductsInStock = (req, res) => {
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No products in stock'));
       } else {
-        const page = req.param('pag') ? parseInt(req.param('pag')) : 1;
-        const limit = req.param('limit') ? parseInt(req.param('limit')) : 10;
+        const page = Number(req.body.pag) || 1;
+        const limit = Number(req.body.limit) || 10;
         // Validation of page parameters
-        if (isNaN(page) || isNaN(limit)) {
-          logger.error(`${req.method} - ${req.originalUrl}, invalid page or limit parameters`);
+        if (limit < 1 || limit > 100) {
+          logger.error(`${req.method} - ${req.originalUrl}, the parameter limit is not valid`);
           res.status(HttpStatus.BAD_REQUEST.code)
-            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page or limit parameters'));
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `the parameter limit is not valid`));
           return;
         }
         // Calculation of pagination parameters
@@ -147,14 +147,14 @@ export const registerProductInStock = async (req, res) => {
         .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Error registering product in stock`));
     } else {
       if (!result) {
-        logger.error(`${req.method} - ${req.originalUrl}, error registering product in stock: ${err}`);
+        logger.error(`${req.method} - ${req.originalUrl}, error registering product in stock`);
         res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
           .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Error registering product in stock`));
       } else {
         const product = result[0][0];
         logger.info(`${req.method} - ${req.originalUrl}, product registered in stock`);
-        res.status(HttpStatus.OK.code)
-          .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Product registered in stock`, { product }));
+        res.status(HttpStatus.CREATED.code)
+          .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Product registered in stock`, { product }));
       }
     }
   });
@@ -199,7 +199,7 @@ export const fillProductsInStock = async (req, res) => {
       return;
     }
     // Check every 'quantity' parameter if is a valid number
-    if (isNaN(product.quantity) || product.quantity <= 0) {
+    if (product.quantity === undefined || product.quantity === null || product.quantity <= 0) {
       logger.error(`${req.method} - ${req.originalUrl}, the item in index ${i} is invalid, the quantity ${product.quantity} is not a valid value`);
       res.status(HttpStatus.BAD_REQUEST.code)
         .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The quantity ${product.quantity} is not valid`));
@@ -307,8 +307,8 @@ export const fillProductsInStock = async (req, res) => {
     }
   }
   // All products registered!
-  res.status(HttpStatus.OK.code)
-    .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `The products were registered successfully`));
+  res.status(HttpStatus.CREATED.code)
+    .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `The products were registered successfully`));
 };
 
 let createSupplierOrderDetail = async(supplierOrderId, productId, quantity) => {
@@ -458,7 +458,7 @@ export const unregProductInStock = (req, res) => {
             if (results.affectedRows > 0) {
               logger.info(`${req.method} - ${req.originalUrl}, product removed from stock`);
               res.status(HttpStatus.OK.code)
-                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Product removed from stock'));
+                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Product removed from stock, current amount is ${product.quantity - quantityToRem}`));
               return;
             } else {
               logger.error(`${req.method} - ${req.originalUrl}, product not removed from stock`);
