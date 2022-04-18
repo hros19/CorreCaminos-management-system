@@ -14,7 +14,7 @@ export const createProduct = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, creating product...`);
   const BODY_PARAMETERS = Object.values(req.body);
   // Check parameter quantity
-  if (BODY_PARAMETERS.length !== 4) {
+  if (BODY_PARAMETERS.length !== 5) {
     logger.error(`${req.method} - ${req.originalUrl}, invalid parameter quantity`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameter quantity'));
@@ -147,14 +147,80 @@ export const getPagedProducts = (req, res) => {
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid order value, must be ASC or DESC'));
     return;
   }
-  logger.info(`>>> 1......`);
   // Checking parameter values
   if (!PARAMETER_VALUES.includes(parameter)) {
+    logger.error(`${req.method} - ${req.originalUrl}, invalid parameter for order value`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameter for order value'));
+    return;
+  }
+  // Checking empty values
+  if (PARAMETER_VALUES.includes('')) {
     logger.error(`${req.method} - ${req.originalUrl}, invalid parameter value, must be one of ${PARAMETER_VALUES}`);
     res.status(HttpStatus.BAD_REQUEST.code)
       .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameter value, must be one of ' + PARAMETER_VALUES));
     return;
   }
+  database.query(PRODUCT_QUERY.SELECT_PRODUCTS, (error, results) => {
+    if (error) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting products: ${error}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error getting products'));
+      return;
+    } else {
+      if (!results[0]) {
+        logger.error(`${req.method} - ${req.originalUrl}, no products found`);
+        res.status(HttpStatus.NOT_FOUND.code)
+          .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No products found'));
+        return;
+      } else {
+        const page = Number(req.body.pag) || 1;
+        const limit = Number(req.body.limit) || 10;
+        if (limit < 1 || limit > 100) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid limit value, must be between 1 and 100`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid limit value, must be between 1 and 100'));
+          return;
+        }
+        // Calculation for pagination parameters
+        let numOfResults = results.length;
+        let numOfPages = Math.ceil(numOfResults / limit);
+        if (page > numOfPages) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid page value, must be between 1 and ${numOfPages}`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page value, must be between 1 and ' + numOfPages));
+          return;
+        }
+        if (page < 1) {
+          logger.error(`${req.method} - ${req.originalUrl}, invalid page value, must be between 1 and ${numOfPages}`);
+          res.status(HttpStatus.BAD_REQUEST.code)
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page value, must be between 1 and ' + numOfPages));
+          return;
+        }
+        // Valid pagination parameters
+        const startingLimit = (page - 1) * limit;
+        database.query(PRODUCT_QUERY.SELECT_PAGED_PRODUCTS, [parameter, order, startingLimit, limit], (error, results) => {
+          if (error) {
+            logger.error(`${req.method} - ${req.originalUrl}, error getting paged products: ${error}`);
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+              .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error getting paged products'));
+            return;
+          } else {
+            if (!results[0]) {
+              logger.error(`${req.method} - ${req.originalUrl}, no paged products found`);
+              res.status(HttpStatus.NOT_FOUND.code)
+                .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No paged products found'));
+              return;
+            } else {
+              logger.info(`${req.method} - ${req.originalUrl}, paged products found successfully`);
+              res.status(HttpStatus.OK.code)
+                .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Paged products found successfully', { data: results[0], page, numOfPages }));
+            }
+          }
+        });
+      }
+    }
+  });
 };
 
 // product_id, product_name, subcatid, isavailavalble
@@ -163,9 +229,9 @@ export const updateProduct = (req, res) => {
   const BODY_PARAMETERS = Object.values(req.body);
   // Check quantity of parameters
   if (BODY_PARAMETERS.length !== 4) {
-    logger.error(`${req.method} - ${req.originalUrl}, invalid parameter values, check documentation`);
+    logger.error(`${req.method} - ${req.originalUrl}, invalid parameter values, must be 4`);
     res.status(HttpStatus.BAD_REQUEST.code)
-      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameter value, check documentation'));
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid parameter value, body must have 4 parameters'));
     return;
   }
   // Check non empty values
@@ -208,7 +274,7 @@ export const updateProduct = (req, res) => {
         return;
       } else {
         // Product found, then check if subcategory exists
-        database.query(PRODUCT_QUERY.SELECT_PRODUCT_SUBCATEGORY, [product_sub_cat_id], (error, results) => {
+        database.query(PRODUCTCATEGORY_QUERY.SELECT_PRODUCTSUBCATEGORY, [product_sub_cat_id], (error, results) => {
           if (error) {
             logger.error(`${req.method} - ${req.originalUrl}, error getting product subcategory: ${error}`);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
@@ -222,7 +288,7 @@ export const updateProduct = (req, res) => {
               return;
             } else {
               // Product subcategory found, then update
-              database.query(PRODUCT_QUERY.UPDATE_PRODUCT, BODY_PARAMETERS, (error, results) => {
+              database.query(PRODUCT_QUERY.UPDATE_PRODUCT, [req.params.id, ...BODY_PARAMETERS], (error, results) => {
                 if (error) {
                   if (error.errno == 1064) {
                     logger.error(`${req.method} - ${req.originalUrl}, invalid parameter values, check documentation`);
