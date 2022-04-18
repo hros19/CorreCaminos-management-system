@@ -25,13 +25,13 @@ export const getPagedDevDays = (req, res) => {
         res.status(HttpStatus.NOT_FOUND.code)
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Delivery days not found'));
       } else {
-        const page = req.param('pag') ? parseInt(req.param('pag')) : 1;
-        const limit = req.param('limit') ? parseInt(req.param('limit')) : 10;
+        const page = Number(req.body.pag) || 1;
+        const limit = Number(req.body.limit) || 10;
         // Validation of page parameters
-        if (isNaN(page) || isNaN(limit)) {
-          logger.error(`${req.method} - ${req.originalUrl}, invalid page or limit parameters`);
+        if (limit < 1 || limit > 100) {
+          logger.info(`${req.method} - ${req.originalUrl}, invalid limit value`);
           res.status(HttpStatus.BAD_REQUEST.code)
-            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page or limit parameters'));
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid limit value'));
           return;
         }
         // Calculation of pagination parameters
@@ -198,8 +198,8 @@ const PARAMETER_DEVINTERVAL_VALUES = [
 // delivery/intervals
 export const getPagedDevIntervals = (req, res) => {
   logger.info(`${req.method} - ${req.originalUrl}, retrieving delivery intervals...`);
-  const parameter = req.param('parameter') || 'dev_interval_id';
-  const order = req.param('order') || 'ASC';
+  const parameter = req.body.parameter || 'dev_interval_id';
+  const order = req.body.order || 'ASC';
   // Check order value
   if (order !== 'ASC' && order !== 'DESC') {
     res.status(HttpStatus.BAD_REQUEST.code)
@@ -224,12 +224,12 @@ export const getPagedDevIntervals = (req, res) => {
           .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No delivery intervals found'));
         return;
       } else {
-        const page = req.param('pag') ? parseInt(req.param('pag')) : 1;
-        const limit = req.param('limit') ? parseInt(req.param('limit')) : 10;
+        const page = Number(req.body.pag) || 1;
+        const limit = Number(req.body.limit) || 10;
         // Validation of page parameters
-        if (isNaN(page) || isNaN(limit)) {
+        if (limit < 1 || limit > 100) {
           res.status(HttpStatus.BAD_REQUEST.code)
-            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid page or limit parameters'));
+            .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid limit value'));
           return;
         }
         // Calculation of pagination parameters
