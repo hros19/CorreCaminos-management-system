@@ -2043,7 +2043,7 @@ if (app.enabled) {
             .get("/product")
             .send(
               {
-                parameter: "product_id",
+                parameter: 'product_id',
                 order: "ASC",
                 pag: 1,
                 limit: 10
@@ -2078,7 +2078,968 @@ if (app.enabled) {
           });
       });
 
-    });
+      describe("Test POST /product (valid)", () => {
+        it ("Should return success message with the product", done => {
+          chai
+            .request(app)
+            .post("/product")
+            .send(
+              {
+                product_name: "Brava Lata 350ml",
+                supplier_id: 2,
+                product_subcat_id: 7,
+                is_available: "YES",
+                price: 50000
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(201);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /product (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .post("/product")
+            .send(
+              {
+                product_name: "Brava Lata 350ml",
+                is_available: "YES"
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /product/:id (valid)", () => {
+        it ("Should return success message with the product", done => {
+          chai
+            .request(app)
+            .get("/product/1")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test GET /product/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/product/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /product/:id (valid)", () => {
+        it ("Should return success message with the product", done => {
+          chai
+            .request(app)
+            .put("/product/16")
+            .send(
+              {
+                product_name: "Brava Lata 1000ml",
+                product_subcat_id: 6,
+                is_available: "YES",
+                price: 6000
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /product/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .put("/product/XD")
+            .send(
+              {
+                product_name: "Brava Lata 350ml",
+                product_subcat_id: 6,
+                is_available: "YES",
+                price: 2000
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /product/:id (valid)", () => {
+        it ("Should return success message with the product", done => {
+          chai
+            .request(app)
+            .delete("/product/1")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /product/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .delete("/product/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+    }); // Ending of product test...
     
+    describe("Test of Business Stock routes", () => {
+
+      describe("Test GET /stock (valid)", () => {
+        it ("Should return success message with the stocks", done => {
+          chai
+            .request(app)
+            .get("/stock")
+            .send(
+              {
+                parameter: 'product_id',
+                order: "ASC",
+                pag: 1,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body.data);
+            });
+          });
+      });
+
+      describe("test GET /stock (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/stock")
+            .send(
+              {
+                parameter: "product_id",
+                order: "ASC",
+                pag: -20,
+                limit: 10
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe('Test GET /stock/:id (valid)', () => {
+        it('Should return success message with the stock', done => {
+          chai
+            .request(app)
+            .get('/stock/2')
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+        });
+      });
+
+      describe("Test GET /stock/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .get("/stock/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /stock/:id (valid)", () => {
+        it ("Should return success message with product in the stock", done => {
+          chai
+            .request(app)
+            .post("/stock/16") // Product not before in stock
+            .send(
+              {
+                quantity: 400
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(201);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /stock/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .post("/stock/10") // Product already in stock
+            .send(
+              {
+                quantity: 400
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /stock/:id (valid)", () => {
+        it ("Should return success message with the stock", done => {
+          chai
+            .request(app)
+            .delete("/stock/10")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /stock/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .delete("/stock/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /stock/:id (valid)", () => {
+        it ("Should return success message with the stock", done => {
+          chai
+            .request(app)
+            .put("/stock/3")
+            .send(
+              {
+                quantity: 5000
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test PUT /stock/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .put("/stock/3")
+            .send(
+              {
+                quantity: 20000 // Not enough stock
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(400);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /stock/:id (valid)", () => {
+        it ("Should return success message with the stock", done => {
+          chai
+            .request(app)
+            .delete("/stock/3")
+            .end((err, res) => {
+              res.should.have.status(200);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test DELETE /stock/:id (invalid)", () => {
+        it ("Should return a error message", done => {
+          chai
+            .request(app)
+            .delete("/stock/XD")
+            .end((err, res) => {
+              res.should.have.status(404);
+              done();
+              console.log(res.body);
+            });
+          });
+      });
+
+      describe("Test POST /stock (valid)", () => {
+        it ("Should return success message with the stock", done => {
+          chai
+            .request(app)
+            .post("/stock")
+            .send(
+              {
+                products: '[' +
+                  '{"product_id": 5, "quantity": 10000}, ' +
+                  '{"product_id": 6, "quantity": 40000}' +
+                ']'
+              }
+            )
+            .end((err, res) => {
+              res.should.have.status(201);
+              done();
+              console.log(res.body);
+            });
+          });
+      }); // Ending of stock testing...
+
+      describe("Testing Delivery Routes", () => {
+
+        describe("Test GET /delivery/day (valid)", () => {
+          it ("Should return success message with the deliveries", done => {
+            chai
+              .request(app)
+              .get("/delivery/day")
+              .send(
+                {
+                  order: "ASC",
+                  pag: 1,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/day (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/delivery/day")
+              .send(
+                {
+                  order: "ASC",
+                  pag: -20,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/day/:id (valid)", () => {
+          it ("Should return success message with the delivery", done => {
+            chai
+              .request(app)
+              .get("/delivery/day/1")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/day/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/delivery/day/XD")
+              .end((err, res) => {
+                res.should.have.status(404);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/interval (valid)", () => {
+          it ("Should return success message with the deliveries", done => {
+            chai
+              .request(app)
+              .get("/delivery/interval")
+              .send(
+                {
+                  parameter: "dev_interval_id",
+                  order: "ASC",
+                  pag: 1,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/interval (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/delivery/interval")
+              .send(
+                {
+                  parameter: "dev_interval_id",
+                  order: "ASC",
+                  pag: -20,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/interval/:id (valid)", () => {
+          it ("Should return success message with the delivery", done => {
+            chai
+              .request(app)
+              .get("/delivery/interval/1")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /delivery/interval/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/delivery/interval/XD")
+              .end((err, res) => {
+                res.should.have.status(404);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+      }); // Ending test of delivery routes...
+
+      describe("Testing Client Routes", () => {
+        
+        describe("Test GET /client/:id (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .get("/client/1")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /client/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/client/XD")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test POST /client (valid)", () => {
+          it ("Should return success message with the client", done => {
+            chai
+              .request(app)
+              .post("/client")
+              .send(
+                {
+                  zone_id: 1,
+                  dev_interval_id: 1,
+                  business_type_id: 1,
+                  business_name: "Nuevo cliente",
+                  business_representative: "Domingo Diaz",
+                  business_phone: "829-829-829",
+                  business_email: "nuevoclient@mail.com",
+                  formal_address: "Calle falsa 123",
+                  latitude: -50,
+                  longitude: 90
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(201);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test POST /client (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .post("/client")
+              .send(
+                {
+                  zone_id: -200,
+                  dev_interval_id: -200,
+                  business_type_id: -200,
+                  business_name: "Nuevo cliente",
+                  business_representative: "Domingo Diaz",
+                  business_phone: "829-829-829",
+                  business_email: "noexiste@mail.com",
+                  formal_address: "Calle falsa 123",
+                  latitude: -50,
+                  longitude: 90
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+          });
+        });
+
+        describe("Test PUT /client/:id (valid)", () => {
+          it ("Should return success message with the client", done => {
+            chai
+              .request(app)
+              .put("/client/1")
+              .send(
+                {
+                  business_type_id: 1,
+                  business_name: "Cliente actualizado",
+                  business_representative: "Ramiro Fuentes",
+                  business_phone: "9090-9090-9090",
+                  business_email: "ramiroventas@mail.com",
+                  formal_address: "Calle falsa 5555"
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test PUT /client/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .put("/client/XD")
+              .send(
+                {
+                  business_type_id: -200,
+                  business_name: "Cliente actualizado",
+                  business_representative: "Ramiro Fuentes",
+                  business_phone: "9090-9090-9090",
+                  business_email: "xd@mail.com",
+                  formal_address: "Calle falsa 5555"
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test DELETE /client/:id (valid)", () => {
+          it ("Should return success message with the client", done => {
+            chai
+              .request(app)
+              .delete("/client/1")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test DELETE /client/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .delete("/client/XD")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /client (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .get("/client")
+              .send(
+                {
+                  parameter: "client_id",
+                  order: "ASC",
+                  pag: 1,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /client (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/client")
+              .send(
+                {
+                  parameter: "client_id",
+                  order: "ASC",
+                  pag: -200,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /client/:id/devday (valid)", () => {
+          it ("Should return success message with the devday", done => {
+            chai
+              .request(app)
+              .get("/client/6/devday")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /client/:id/devday (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/client/XD/devday")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test POST /client/:id/devday (valid)", () => {
+          it ("Should return success message with the devday", done => {
+            chai
+              .request(app)
+              .post("/client/5/devday")
+              .send(
+                {
+                  delivery_day_id: 3
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(201);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test POST /client/:id/devday (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .post("/client/6/devday") // Already full of delivery days!
+              .send(
+                {
+                  delivery_day_id: 2
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(500);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /client/order (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .get("/client/order")
+              .send(
+                {
+                  parameter: "client_id",
+                  order: "ASC",
+                  pag: 1,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /client/order (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/client/order")
+              .send(
+                {
+                  parameter: "client_id",
+                  order: "ASC",
+                  pag: -200,
+                  limit: 10
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /client/order/:id (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .get("/client/order/1")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /client/order/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/client/order/XD")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test PUT /client/order/:id (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .put("/client/order/1")
+              .send(
+                {
+                  status: "COMPLETADO"
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(304);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test PUT /client/order/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .put("/client/order/XD")
+              .send(
+                {
+                  status: "COMPLETADO"
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /client/:id/order (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .get("/client/2/order")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test GET /client/:id/order (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .get("/client/XD/order")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test DELETE /client/order/:id (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .delete("/client/order/1")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test DELETE /client/order/:id (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .delete("/client/order/XD")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test POST /client/:id/order (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .post("/client/2/order")
+              .send(
+                {
+                  products: '[' +
+                    '{"product_id": 5, "quantity": 100000}, ' +
+                    '{"product_id": 6, "quantity": 500}' +
+                  ']'
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(201);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+        describe("Test POST /client/:id/order (invalid)", () => {
+          it ("Should return a error message", done => {
+            chai
+              .request(app)
+              .post("/client/XD/order")
+              .send(
+                {
+                  products: '[' +
+                    '{"product_id": 5, "quantity": 100000}, ' +
+                    '{"product_id": 6, "quantity": 500}' +
+                  ']'
+                }
+              )
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+            });
+        });
+
+        describe("Test GET /client/order/:id/detail (valid)", () => {
+          it ("Should return success message with the clients", done => {
+            chai
+              .request(app)
+              .get("/client/order/2/detail")
+              .end((err, res) => {
+                res.should.have.status(200);
+                done();
+                console.log(res.body.data);
+              });
+            });
+        });
+
+      }); // Ending of client testing...
+
+    });
+
   }); // Ending of main test...
 }
