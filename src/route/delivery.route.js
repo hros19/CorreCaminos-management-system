@@ -5,18 +5,16 @@ import { getPagedDevIntervals, getDevInterval } from '../controller/delivery.con
 const deliveryRoutes = express.Router();
 
 deliveryRoutes.route('/day')
-  .get(getPagedDevDays);
+  .get(getPagedDevDays); // tested
 
 deliveryRoutes.route('/day/:id')
-  .get(selectDevDay)
-  .put(updateDevDay)
-  .delete(deleteDevDay);
+  .get(selectDevDay) // tested
 
 deliveryRoutes.route('/interval')
-  .get(getPagedDevIntervals);
+  .get(getPagedDevIntervals); // tested
 
 deliveryRoutes.route('/interval/:id')
-  .get(getDevInterval);
+  .get(getDevInterval); // tested
 
 
 export default deliveryRoutes;
