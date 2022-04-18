@@ -7,7 +7,7 @@ const DELIVERY_QUERY = {
   DELETE_DEVDAY: 'DELETE FROM DeliveryDay WHERE dev_day_id = ?',
   // DeliveryIntervals
   SELECT_DEVINTERVALS: 'SELECT * FROM DeliveryInterval',
-  SELECT_PAGED_DEVINTERVALS: 'CALL getp_dev_intervals(?, ?, ?)',
+  SELECT_PAGED_DEVINTERVALS: 'CALL getp_dev_intervals(?, ?, ?, ?)',
   SELECT_DEVINTERVAL: 'SELECT * FROM DeliveryInterval WHERE dev_interval_id = ?'
 };
 
