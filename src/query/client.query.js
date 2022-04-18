@@ -3,7 +3,7 @@ const CLIENT_QUERY = {
   CREATE_CLIENT: 'CALL create_client(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   DELETE_CLIENT: 'DELETE FROM Client WHERE client_id = ?',
   SELECT_CLIENTS: 'SELECT * FROM Client',
-  SELECT_PAGED_CLIENTS: 'CALL getp_client(?, ?, ?, ?)',
+  SELECT_PAGED_CLIENTS: 'CALL getp_clients(?, ?, ?, ?)',
   SELECT_CLIENT: 'SELECT * FROM Client WHERE client_id = ?',
   // ClientXDevDay
   CREATE_CLIENTXDEVDAY: 'CALL create_clientxdevday(?, ?)',
@@ -22,7 +22,9 @@ const CLIENT_QUERY = {
   CREATE_CLIENTORDERDETAIL: 'CALL create_cltOrdDet(?, ?, ?)',
   SELECT_CLIENTORDERDETAILS: 'SELECT * FROM ClientOrderDetail',
   SELECT_PAGED_CLIENTORDERDETAILS: 'CALL getp_cltOrdDet(?, ?, ?, ?)',
-  SELECT_DETAILS_OF_CLIENTORDER: 'CALL getp_cltOrdDetOf(?, ?, ?, ?, ?)',
+  SELECT_DETAILS_OF_CLIENTORDER: 'CALL get_cltOrdDetOf(?)',
+  SELECT_PAGED_DETAILS_OF_CLIENTORDER: 'CALL getp_cltOrdDetOf(?, ?, ?, ?, ?)',
+  DELETE_CLIENTORDER: 'DELETE FROM ClientOrder WHERE client_order_id = ?'
 };
 
 export default CLIENT_QUERY;
