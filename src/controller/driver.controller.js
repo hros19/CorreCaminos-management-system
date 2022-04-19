@@ -47,7 +47,6 @@ export const completeClientOrder = async (req, res) => {
   }
   // id, vehid, jobid, nme, docid, salary, hiringdate
   const driver_object = result[0];
-  logger.info(`${driver_object.driver_name}`);
   // Check if the client is a 'Repartidor'
   if (driver_object.job_title_id != 2) {
     logger.error(`${req.method} ${req.originalUrl}, driver is not a repartidor`);
