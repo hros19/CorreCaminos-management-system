@@ -80,7 +80,7 @@ BEGIN
   FROM Vehicle WHERE vehicle_id = pVehicleId;
   -- Check if the kilometers are valid
 	IF (vActualTankStatus - pKilometers < 0) THEN
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Need more gasoline to travel that amount of kilometers', MYSQL_ERRNO = '1000';
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Tank amount cant afford that quantity of kilometers', MYSQL_ERRNO = '1001';
 	ELSEIF (pKilometers < 0) THEN
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unvalid kilometers by parameter', MYSQL_ERRNO = '1001';
 	ELSE
@@ -88,7 +88,6 @@ BEGIN
 											gas_tank_status = (gas_tank_status - pKilometers)
 		WHERE vehicle_id = pVehicleId;
 	END IF;
-	COMMIT;
 END $$
 
 /*
@@ -307,6 +306,16 @@ BEGIN
 												 'LIMIT ', pStart, ', ', pElemPerPage);
 	PREPARE myQuery FROM @strQuery;
   EXECUTE myQuery;
+END $$
+
+/*
+PROCEDURE get_zoneKilometers
+Get the kilometers of a route of a zone.
+*/
+CREATE PROCEDURE get_zoneKilometers(IN pZoneId INT)
+BEGIN
+	SELECT SUM(rt.route_distance_km) AS total_km FROM ZoneXRoute zxr INNER JOIN Route rt ON rt.route_id = zxr.route_id
+	WHERE zxr.zone_id = pZoneId;
 END $$
 
 /*
@@ -1858,6 +1867,17 @@ BEGIN
 END $$
 
 /*
+PROCEDURE: upd_clientOrderDeliveryDate
+DESCRIPTION: Update the delivery date of an existing client order.
+*/
+CREATE PROCEDURE upd_clientOrderDeliveryDate(IN pClientOrderId INT, IN pDeliveryDate DATE)
+BEGIN
+	UPDATE ClientOrder
+	SET order_delivery_date = pDeliveryDate
+	WHERE client_order_id = pClientOrderId;
+END $$
+
+/*
 FUNCTION get_ordStatus
 DESCRIPTION: Returns the status of a client order.
 */
@@ -1999,17 +2019,74 @@ END $$
 
 DELIMITER ;
 
--- Charset for all tables.
-SELECT CONCAT('ALTER TABLE ', TABLE_NAME, ' CONVERT TO CHARACTER SET utf8 COLLATE utf8_unicode_ci;')
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = 'correcaminosdb' AND TABLE_TYPE != 'VIEW';
+CREATE TABLE DailyReport (
+	daily_report_id INT NOT NULL AUTO_INCREMENT,
+	report_date DATE NOT NULL DEFAULT (CURRENT_DATE),
+	CONSTRAINT PK_DailyReport
+		PRIMARY KEY (daily_report_id)
+);
+
+CREATE TABLE DailyReportOrders (
+	daily_report_id INT NOT NULL,
+	client_order_id INT NOT NULL,
+	CONSTRAINT PK_DailyReportOrders
+		PRIMARY KEY (daily_report_id, client_order_id),
+	CONSTRAINT FK_DailyReportOrders_dailyId
+		FOREIGN KEY (daily_report_id)
+		REFERENCES DailyReport (daily_report_id)
+		ON DELETE CASCADE,
+	CONSTRAINT FK_DailyReportOrders_ordId
+		FOREIGN KEY (client_order_id)
+		REFERENCES ClientOrder (client_order_id)
+		ON DELETE CASCADE
+);
+
+DELIMITER $$
+/*
+PROCEDURE: get_reportByDate
+DESCRIPTION: Returns all the orders of a day.
+*/
+CREATE PROCEDURE get_reportByDate(IN pDate DATE)
+BEGIN
+	SELECT dr.daily_report_id, dr.report_date, co.client_order_id, co.client_id, co.order_status, co.order_date FROM DailyReport dr
+	INNER JOIN DailyReportOrders dro ON dro.daily_report_id = dr.daily_report_id
+	INNER JOIN ClientOrder co ON co.client_order_id = dro.client_order_id
+	WHERE dr.report_date = pDate;
+END $$
+
+/*
+PROCEDURE create_dailyReport
+DESCRIPTION: Create a new daily report.
+*/
+CREATE PROCEDURE create_dailyReport()
+BEGIN
+	DECLARE clientOrderId INT;
+	-- Select all the clientOrders with status 'EN DESPACHO'
+	DECLARE cursor1 CURSOR FOR SELECT client_order_id FROM ClientOrder WHERE order_status = 'EN DESPACHO';
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET @dailyReportId = NULL;
+	INSERT INTO DailyReport (report_date)
+	VALUES (CURRENT_DATE);
+	SET @dailyReportId = LAST_INSERT_ID();
+	OPEN cursor1;
+	bucle: LOOP
+		FETCH cursor1 INTO clientOrderId;
+		IF @dailyReportId IS NULL THEN
+			LEAVE bucle;
+		END IF;
+		INSERT INTO DailyReportOrders (daily_report_id, client_order_id)
+		VALUES (@dailyReportId, clientOrderId);
+	END LOOP bucle;
+	CLOSE cursor1;
+END $$
+
+DELIMITER ;
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- DATA INSERTION
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CALL create_vehicle('Nissan', 'ABC-123', 'Diesel', 50, 40, 300);
-CALL create_vehicle('Toyota', 'XYZ-456', 'Premium', 30, 20, 150);
+CALL create_vehicle('Nissan', 'ABC-123', 'Diesel', 500, 400, 300);
+CALL create_vehicle('Toyota', 'XYZ-456', 'Premium', 3000, 200, 150);
 CALL create_vehicle('Tesla', 'MMM-111', 'Normal', 100, 96, 0);
 
 UPDATE Vehicle
@@ -2097,7 +2174,7 @@ CALL create_product('Yogurt Arandano 250ml', 1, 5, 'YES', 750);
 CALL create_product('Yogurt Fresa 250ml', 1, 5, 'YES', 750);
 CALL create_product('Pilsen TR 250ml', 1, 7, 'YES', 1500);
 CALL create_product('Heineken LT 333ml', 1, 7, 'YES', 2000);
-CALL create_product('Imperial', 1, 7, 'NO', 1000);
+CALL create_product('Imperial', 1, 7, 'YES', 1000);
 CALL create_product('Coca Cola 355ml', 2, 6, 'YES', 600);
 CALL create_product('Fresca 600ml', 2, 6, 'YES', 1000);
 CALL create_product('Arroz Integral 1kg', 3, 1, 'NO', 2500);
@@ -2108,12 +2185,12 @@ CALL create_product('Harina Integral 300g', 3, 3, 'YES', 5000);
 CALL create_product('Harina Reposteria 300g', 3, 3, 'YES', 10000);
 CALL create_product('Harina Premium 100g', 3, 3, 'YES', 100000);
 
-CALL reg_prod_bussStock(2, 500);
+CALL reg_prod_bussStock(2, 55000);
 CALL reg_prod_bussStock(3, 8000);
-CALL reg_prod_bussStock(4, 450);
-CALL reg_prod_bussStock(5, 550); 
+CALL reg_prod_bussStock(4, 1000);
+CALL reg_prod_bussStock(5, 24300); 
 CALL reg_prod_bussStock(6, 900); 
-CALL reg_prod_bussStock(7, 1200); 
+CALL reg_prod_bussStock(7, 12000); 
 CALL reg_prod_bussStock(8, 1650); 
 CALL reg_prod_bussStock(9, 2000); 
 CALL reg_prod_bussStock(10, 900); 
@@ -2180,14 +2257,37 @@ VALUES (3, 'COMPLETADO', '2022-01-01', '2022-01-02');
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
 VALUES (2, 1, 500);
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
-VALUES (2, 2, 50000);
+VALUES (2, 2, 5000);
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
 VALUES (2, 4, 760);
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
-VALUES (2, 5, 20000);
+VALUES (2, 5, 2000);
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
 VALUES (2, 7, 6000);
+
+UPDATE ClientOrder SET order_delivery_date='2022-04-17', order_status="PENDIENTE" WHERE client_order_id = 2;
+
+-- Pending Orders with delivery date as now.
+INSERT INTO ClientOrder (client_id, order_status, order_date, order_delivery_date)
+VALUES (3, 'EN DESPACHO', '2022-04-15', CURRENT_DATE);
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
-VALUES (2, 9, 3000);
+VALUES (3, 3, 20);
 INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
-VALUES (2, 10, 42000);
+VALUES (3, 4, 10);
+
+INSERT INTO ClientOrder (client_id, order_status, order_date, order_delivery_date)
+VALUES (4, 'EN DESPACHO', '2022-02-15', CURRENT_DATE);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (4, 3, 5);
+INSERT INTO ClientOrderDetail (client_order_id, product_id, quantity)
+VALUES (4, 8, 9);
+
+-- Events
+/*
+EVENT generate_dailyReport
+DESCRIPTION: This event will generate a daily report every day at 00:00:00.
+*/
+CREATE EVENT generate_dailyReport
+ON SCHEDULE EVERY 1 DAY STARTS CURRENT_TIMESTAMP
+DO
+	CALL create_dailyReport();
