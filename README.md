@@ -16,7 +16,6 @@ Primer proyecto de Bases de Datos II que involucra la creación de un Rest API u
 ## Contenidos
 - [Deployment](#deployment)
 - [Descripción del problema](#descripción-del-problema)
-- [Resumen de la solución](#resumen-de-la-solución)
 - [Utilizar la aplicación](#utilizar-la-aplicación)
   - [Mocha](#mocha)
   - [Manual - http](#manual-http)
