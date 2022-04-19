@@ -34,7 +34,7 @@ Primer proyecto de Bases de Datos II que involucra la creación de un Rest API u
   - [Vehiculos](#vehiculos)
   - [Zonas](#zonas)
 - [Objetivos](#objetivos)
-- [Conclusión](#conclusión)
+- [Conclusiones](#conclusiones)
 
 
 ## Deployment
