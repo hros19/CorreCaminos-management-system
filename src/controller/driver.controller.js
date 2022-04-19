@@ -5,6 +5,7 @@ import logger from '../util/logger.js';
 import DRIVER_QUERY from '../query/driver.query.js';
 import VEHICLE_QUERY from '../query/vehicle.query.js';
 import JOBTITLE_QUERY from '../query/jobtitle.query.js';
+import CLIENT_QUERY from '../query/client.query.js';
 
 const ORDER_VALUES = [
   'ASC', 'DESC', 'asc', 'desc'
@@ -14,6 +15,178 @@ const PARAMETER_VALUES = [
   'driver_id', 'driver_name', 'job_title_name', 'driver_doc_id',
   'salary', 'hiring_date', 'vehicle_id', 'car_plaque'
 ];
+
+export const completeClientOrder = async (req, res) => {
+  logger.info(`${req.method} ${req.originalUrl}, completing client order...`);
+  const driver_id = Number(req.params.id) || null;
+  if (driver_id == null || driver_id == undefined) {
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid driver id'));
+    return;
+  }
+  // Check if the driver exists
+  let result = await new Promise((resolve, reject) => database.query(DRIVER_QUERY.SELECT_DRIVER, [driver_id], (error, results) => {
+    if (error) {
+      reject(new Error(error));
+    } else {
+      resolve(results);
+    }
+  }));
+  if (result instanceof Error) {
+    logger.error(`${req.method} ${req.originalUrl}, error: ${result.message}`);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+  }
+  // If no driver was found
+  if (!result[0]) {
+    logger.error(`${req.method} ${req.originalUrl}, driver not found`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Driver not found'));
+    return;
+  }
+  // id, vehid, jobid, nme, docid, salary, hiringdate
+  const driver_object = result[0];
+  logger.info(`${driver_object.driver_name}`);
+  // Check if the client is a 'Repartidor'
+  if (driver_object.job_title_id != 2) {
+    logger.error(`${req.method} ${req.originalUrl}, driver is not a repartidor`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Driver is not a repartidor'));
+    return;
+  }
+  // Check if the client order exists
+  const client_order_id = Number(req.params.clientOrderId) || null;
+  if (client_order_id == null || client_order_id == undefined) {
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Invalid client order id'));
+    return;
+  }
+  result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_CLIENTORDER, [client_order_id], (error, results) => {
+    if (error) {
+      reject(new Error(error));
+    } else {
+      resolve(results);
+    }
+  }));
+  if (result instanceof Error) {
+    logger.error(`${req.method} ${req.originalUrl}, error: ${result.message}`);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+  }
+  // If no client order was found
+  if (!result[0]) {
+    logger.error(`${req.method} ${req.originalUrl}, client order not found`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Client order not found'));
+    return;
+  }
+  // id, clitnid, orderstatus, date, deliverydate
+  const client_order_object = result[0];
+  // Driver and Client Order Valid
+  // Get the information of the client
+  if (client_order_object.order_status != 'EN DESPACHO') {
+    logger.error(`${req.method} ${req.originalUrl}, client order is not in delivery`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Client order is not in delivery'));
+    return;  
+  }
+  result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_CLIENT, [client_order_object.client_id], (error, results) => {
+    if (error) {
+      reject(new Error(error));
+    } else {
+      resolve(results);
+    }
+  }));
+  if (result instanceof Error) {
+    logger.error(`${req.method} ${req.originalUrl}, error: ${result.message}`);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+  }
+  // If no client was found
+  if (!result[0]) {
+    logger.error(`${req.method} ${req.originalUrl}, client not found`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Client not found'));
+    return;
+  }
+  const client_object = result[0];
+  // clientid, geoaddressid, zoneid, devintervalid, businesstypeid, name, represent, number, email, formaladdress
+  result = await new Promise((resolve, reject) => database.query(DRIVER_QUERY.SELECT_ZONE_KILOMETERS, [client_object.zone_id], (error, results) => {
+    if (error) {
+      reject(new Error(error));
+    } else {
+      resolve(results);
+    }
+  }));
+  if (result instanceof Error) {
+    logger.error(`${req.method} ${req.originalUrl}, error: ${result.message}`);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+  }
+  if (!result[0]) {
+    logger.error(`${req.method} ${req.originalUrl}, client address not found (Bad register of zone-route)`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Client address not found (Bad register of zone-route)'));
+    return;
+  }
+  let total_kilometers = Object.values(result[0])[0].total_km;
+  total_kilometers = total_kilometers.toFixed(2);
+  logger.info(`${driver_object.vehicle_id}, ${total_kilometers}`);
+  // With total kilometers to travel and the client order information, then register the kilometers to the driver vehicle
+  result = await new Promise((resolve, reject) => database.query(VEHICLE_QUERY.REGISTER_KILOMETERS, [driver_object.vehicle_id, total_kilometers], (error, results) => {
+    if (error) {
+      logger.error(`${req.method} ${req.originalUrl}, error 1: ${error}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+    } else {
+      resolve(results);
+    }
+  }));
+  if (result instanceof Error) {
+    logger.error(`${req.method} ${req.originalUrl}, error 2: ${result.message}`);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+  }
+  if (result.affectedRows > 0) {
+    // If the kilometers were registered successfully, then update the client order status to 'COMPLETADO'
+    result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.UPDATE_CLIENTORDER, [client_order_id, 'COMPLETADO'], (error, results) => {
+      if (error) {
+        logger.error(`${req.method} ${req.originalUrl}, error 3: ${error}`);
+        reject(new Error(error));
+      } else {
+        resolve(results);
+      }
+    }));
+    if (result instanceof Error) {
+      logger.error(`${req.method} ${req.originalUrl}, error 4: ${result.message}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+      return;
+    }
+    if (result.affectedRows > 0) {
+      logger.info(`${req.method} ${req.originalUrl}, client order updated successfully`);
+      res.status(HttpStatus.OK.code)
+        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Client order completed successfully'));
+      return;
+    } else {
+      logger.error(`${req.method} ${req.originalUrl}, client order not updated`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Client order not updated'));
+      return;
+    }
+  } else {
+    logger.error(`${req.method} ${req.originalUrl}, error 5: ${result.message}`);
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+      .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, result.message));
+    return;
+  }
+}
 
 export const createDriver = (req, res) => {
   logger.info(`${req.method} ${req.originalUrl}, creating driver...`);
