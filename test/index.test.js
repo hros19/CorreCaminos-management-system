@@ -8,6 +8,64 @@ if (app.enabled) {
 
   describe("Test CorreCaminos management system", () => {
 
+    describe("Test GET /report (valid)", () => {
+      it("should return a report by a date", done => {
+        chai
+          .request(app)
+          .get("/report")
+          .send({ date: "2022-04-18" })
+          .end((err, res) => {
+            res.should.have.status(200);
+            res.body.should.be.a("object");
+            done();
+            console.log(res.body);
+          });
+      });
+    });
+
+    describe("Test GET /report (invalid)", () => {
+      it("should return a report by a date", done => {
+        chai
+          .request(app)
+          .get("/report")
+          .send({ date: "fecha-invalida" })
+          .end((err, res) => {
+            res.should.have.status(400);
+            res.body.should.be.a("object");
+            done();
+            console.log(res.body);
+          });
+      });
+    });
+
+    describe("Test GET /driver/:id/delivery/:clientOrderId (valid)", () => {
+      it("should return a driver by id and complete a client order", done => {
+        chai
+          .request(app)
+          .post("/driver/2/delivery/3")
+          .end((err, res) => {
+            res.should.have.status(200);
+            res.body.should.be.a("object");
+            done();
+            console.log(res.body);
+          });
+      });
+    });
+
+    describe("Test GET /driver/:id/delivery/:clientOrderId (invalid)", () => {
+      it("should return a driver by id and complete a client order", done => {
+        chai
+          .request(app)
+          .post("/driver/1/delivery/1") // driver 1 is promoter
+          .end((err, res) => {
+            res.should.have.status(400);
+            res.body.should.be.a("object");
+            done();
+            console.log(res.body);
+          });
+      });
+    });
+    
     // Testing basic route to validate connection.
     describe("Testing Initial Connection", () => {
       it("Should return a welcome message", done => {
@@ -3037,9 +3095,36 @@ if (app.enabled) {
             });
         });
 
-      }); // Ending of client testing...
+        describe("Test PUT /client/order/:id/resume (valid)", () => {
+          it("Should return a message", done => {
+            chai
+              .request(app)
+              .put("/client/order/2/resume")
+              .end((err, res) => {
+                res.should.have.status(200);
+                res.body.should.be.a("object");
+                res.body.should.have.property("message");
+                done();
+                console.log(res.body);
+              });
+          });
+        });
 
-    });
+        describe("Test PUT /client/order/:id/resume (invalid)", () => {
+          it("Should return a message", done => {
+            chai
+              .request(app)
+              .put("/client/order/XD/resume")
+              .end((err, res) => {
+                res.should.have.status(400);
+                done();
+                console.log(res.body);
+              });
+          });
+        });
 
+      });
+
+    }); 
   }); // Ending of main test...
 }
