@@ -948,9 +948,203 @@ export const createClientOrder = async (req, res) => {
     const quantity = products[i].quantity;
     let result = await auxCreateCltOrdDet(client_order_id, product_id, quantity);
   }
+  // If the status is "EN DESPACHO" then dispatch the order
+  if (status == 'EN DESPACHO') {
+    let result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.DISPATCH_ORDER, [client_order_id], (err, results) => {
+      if (err) {
+        logger.error(`${req.method} - ${req.originalUrl}, error dispatching order: ${err}`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error dispatching order'));
+        return;
+      }
+      resolve(results[0]);
+    }));
+  };
   // Send the response
   res.status(HttpStatus.CREATED.code)
     .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `The order was created successfully`, { order_satus: client_order[2], client_order_id: client_order[0], delivery_date: client_order[4] }));
+};
+
+export const resumeClientOrder = async (req, res) => {
+  logger.info(`${req.method} - ${req.originalUrl}, resuming client order...`);
+  const client_order_id = Number(req.params.id) || null;
+  if (client_order_id == null || client_order_id == undefined) {
+    logger.error(`${req.method} - ${req.originalUrl}, client order id was not passed`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'Client order id was not passed'));
+    return;
+  }
+  let result = await auxGetClientOrder(client_order_id);
+  if (result instanceof Error) {
+    logger.error(`${req.method} - ${req.originalUrl}, error getting client order: ${result}`);
+    res.status(HttpStatus.NOT_FOUND.code)
+      .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'Error getting client order'));
+    return;
+  }
+  const client_order = Object.values(result);
+  if (client_order[2] != 'PENDIENTE') {
+    logger.error(`${req.method} - ${req.originalUrl}, the client order ${client_order_id} is not pending`);
+    res.status(HttpStatus.BAD_REQUEST.code)
+      .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, 'The client order is not pending'));
+    return;
+  }
+  // Check if the client_order order_delivery_date is in the past
+  let flagChangeDelivDate = (client_order[4] <= new Date());
+  //logger.info(`>>>> ${client_order[4].toLocaleDateString("fr-CA")}`);
+  // Get the client order details
+  result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_DETAILS_OF_CLIENTORDER, [client_order_id], (err, results) => {
+    if (err) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting client order details: ${err}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error getting client order details'));
+      return;
+    }
+    if (!results) {
+      logger.error(`${req.method} - ${req.originalUrl}, the client order ${client_order_id} does not exist`);
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The client order does not exist'));
+      return;
+    }
+    resolve(results);
+  }));
+  // For each client order detail we would check if the products still available
+  const client_order_details = Object.values(result[0]);
+  const product_info = [];
+  const products_in_stock = [];
+  for(let i in client_order_details) {
+    let result = await getProduct(client_order_details[i].product_id);
+    product_info.push(Object.values(result[0]));
+    // If the product doesnt exist anymore (fatal error)
+    if (!result[0]) {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${client_order_details[i].product_id} does not exist`);
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The product does not exist'));
+      return;
+    }
+    // If the product is not available anymore
+    if (result[0].is_available == "NO") {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${client_order_details[i].product_id} is not available`);
+      res.status(HttpStatus.BAD_REQUEST.code)
+        .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${client_order_details[i].product_id} is not available`));
+      return;
+    }
+    // If the stock is enough
+    result = await getProductInStock(client_order_details[i].product_id);
+    products_in_stock.push(Object.values(result[0]));
+    if (result.length == 0) {
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${client_order_details[i].product_id} does not exist in stock`);
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'The product does not exist in stock'));
+      return;
+    }
+    if (result[0].quantity < client_order_details[i].quantity) {
+      logger.info(`${result[0].quantity} -- ${client_order_details[i].quantity}`);
+      logger.error(`${req.method} - ${req.originalUrl}, the product ${client_order_details[i].product_id} does not have enough stock`);
+      // res.status(HttpStatus.BAD_REQUEST.code)
+      //   .send(new Response(HttpStatus.BAD_REQUEST.code, HttpStatus.BAD_REQUEST.status, `The product ${client_order_details[i].product_id} does not have enough stock`));
+      // return;
+    }
+  }
+  // All seems ok, we can resume the client order
+  for (let i in client_order_details) {
+    let result = await new Promise((resolve, reject) => database.query(BUSINESSSTOCK_QUERY.UNREG_PRODUCT_IN_STOCK, [client_order_details[i].product_id, client_order_details[i].quantity], (err, results) => {
+      if (err) {
+        logger.error(`${req.method} - ${req.originalUrl}, error unregistering product in stock: ${err}`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error unregistering product in stock'));
+        return;
+      }
+      if (results.affectedRows > 0) {
+        logger.info(`${req.method} - ${req.originalUrl}, the product ${client_order_details[i].product_id} was unregistered in stock`);
+        resolve(results);
+      } else {
+        logger.error(`${req.method} - ${req.originalUrl}, the product ${client_order_details[i].product_id} was not unregistered in stock`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'The product was not unregistered in stock'));
+        return;
+      }
+    }));
+  }
+  // Al products were unregistered in stock, we can update the client order
+  if (flagChangeDelivDate) {
+    // Get next date of delivery
+    let result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_CLIENT_DEVDAYS, [client_order[1]], (err, results) => {
+      if (err) {
+        reject(new Error(err));
+      } else {
+        resolve(results);
+      }
+    }));
+    if (result instanceof Error) {
+      logger.error(`${req.method} - ${req.originalUrl}, error getting client dev days: ${result}`);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+        .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error getting client dev days'));
+      return;
+    }
+    // Get the result as an array
+    let devdaysObject = Object.values(result[0]);
+    let newDateDelivery;
+    if (devdaysObject.length == 0) {
+      res.status(HttpStatus.NOT_FOUND.code)
+        .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'No client dev days registered'));
+      return;
+    }
+    logger.info(`leng >>> ${devdaysObject.length}`);
+    if (devdaysObject.length == 1) {
+      // If have only one delivery day, select the next date of that day
+      newDateDelivery = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_NEXTDATEOF, [devdaysObject[0].dev_day_name], (err, results) => {
+        if (err) {
+          reject(new Error(err));
+        } else {
+          resolve(results);
+        }
+      }));
+      if (newDateDelivery instanceof Error) {
+        logger.error(`${req.method} - ${req.originalUrl}, error getting next date of delivery: ${newDateDelivery}`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error getting next date of delivery'));
+        return;
+      }
+      newDateDelivery = newDateDelivery[0].NextDateOf.toLocaleDateString("fr-CA");
+    }
+    if (devdaysObject.length > 1) {
+      // If there are more than 2 dates of delivery, select the next date of the closest one
+      let closestDate = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_CLOSERDAY, [devdaysObject[0].dev_day_name, devdaysObject[1].dev_day_name], (err, results) => {
+        if (err) {
+          reject(new Error(err));
+        } else {
+          resolve(results);
+        }
+      }));
+      if (closestDate instanceof Error) {
+        logger.error(`${req.method} - ${req.originalUrl}, error getting closest date of delivery: ${closestDate}`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error getting closest date of delivery'));
+        return;
+      }
+      newDateDelivery = closestDate[0].CloserDay.toLocaleDateString("fr-CA");
+    }
+    result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.UPDATE_CLIENTORDER_DEVDAY, [client_order_id, newDateDelivery], (err, results) => {
+      if (err) {
+        logger.error(`${req.method} - ${req.originalUrl}, error updating client order delivery date: ${err}`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'Error updating client order delivery date'));
+        return;
+      }
+      if (results.affectedRows > 0) {
+        logger.info(`${req.method} - ${req.originalUrl}, the client order ${client_order_id} delivery date was updated`);
+        resolve(results);
+      } else {
+        logger.error(`${req.method} - ${req.originalUrl}, the client order ${client_order_id} delivery date was not updated`);
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
+          .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, 'The client order delivery date was not updated'));
+        return;
+      }
+    }));
+  }
+  // Send the response
+  res.status(HttpStatus.OK.code)
+    .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Client order updated'));
 };
 
 const PARAMETER_CLIENTORDERDETAILS = [
@@ -1075,7 +1269,7 @@ let auxGetClientOrder = async(client_order_id) => {
   let result = await new Promise((resolve, reject) => database.query(CLIENT_QUERY.SELECT_CLIENTORDER, [client_order_id], (error, results) => {
     if (error) {
       logger.error(`Error getting client order: ${error}`);
-      reject(error);
+      reject(new Error(`Client order ${client_order_id} does not exist`));
     } else {
       if (!results[0]) {
         logger.error(`Client order ${client_order_id} does not exist`);
