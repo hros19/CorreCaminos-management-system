@@ -13,6 +13,8 @@
 # CorreCaminos Rest API 📦
 Primer proyecto de Bases de Datos II que involucra la creación de un Rest API utilizando como tecnologías principales Docker, MySQL y NodeJS. Por el momento no está implementada una interfaz gráfica.
 
+Estudiante: Hansol Antay Rostrán
+
 ## Contenidos
 - [Deployment](#deployment)
 - [Descripción del problema](#descripción-del-problema)
