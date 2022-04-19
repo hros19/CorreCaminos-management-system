@@ -3,7 +3,7 @@ services:
   mysqldb:
     image: mysql:8.0.28
     container_name: mysqlcontainer
-    command: --default-authentication-plugin=mysql_native_password
+    command: ['mysqld', '--default-authentication-plugin=mysql_native_password', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci', '--default-time-zone=-06:00']
     restart: unless-stopped
     cap_add:
       - SYS_NICE
