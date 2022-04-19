@@ -1,5 +1,5 @@
 import express from 'express';
-import { createClient, getPagedClients, getClient, updateClient, deleteClient, getClientDevDays, getOrdersOfClient, createClientOrder, getDetailsOfClientOrder } from '../controller/client.controller.js';
+import { createClient, getPagedClients, getClient, updateClient, deleteClient, getClientDevDays, getOrdersOfClient, createClientOrder, getDetailsOfClientOrder, resumeClientOrder } from '../controller/client.controller.js';
 import { createClientDevDay, deleteClientDevDay, getClientOrders, getClientOrder, updateClientOrder } from '../controller/client.controller.js';
 import { deleteClientOrder } from '../controller/client.controller.js';
 
@@ -17,9 +17,11 @@ clientRoutes.route('/order/:id')
   .put(updateClientOrder) // Tested
   .delete(deleteClientOrder); // Tested
 
+clientRoutes.route('/order/:id/resume')
+  .put(resumeClientOrder); // Tested
+
 clientRoutes.route('/order/:id/detail')
   .get(getDetailsOfClientOrder) // Tested
-
 
 clientRoutes.route('/:id')
   .get(getClient) // Tested
