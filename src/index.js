@@ -17,6 +17,7 @@ import productRoutes from './route/product.route.js';
 import businessStockRoutes from './route/business_stock.route.js';
 import deliveryRoutes from './route/delivery.route.js';
 import clientRoutes from './route/client.route.js';
+import reportRoutes from './route/report.route.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/product', productRoutes); // tested
 app.use('/stock', businessStockRoutes); // tested
 app.use('/delivery', deliveryRoutes); // tested
 app.use('/client', clientRoutes); // tested
+app.use('/report', reportRoutes); // tested
 app.use('/', (req, res) => {
   res.status(HttpStatus.OK.code)
     .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Welcome to CorreCaminos management system', { 
