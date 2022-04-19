@@ -18,6 +18,9 @@ const CLIENT_QUERY = {
   SELECT_ORDERS_OF_CLIENT: 'CALL get_ordersOfClient(?)',
   SELECT_PAGED_ORDERS_OF_CLIENT: 'CALL getp_ordersOfClient(?, ?, ?, ?, ?)',
   DISPATCH_ORDER: 'CALL dispatch_order(?)',
+  UPDATE_CLIENTORDER_DEVDAY: 'CALL upd_clientOrderDeliveryDate(?, ?)',
+  SELECT_CLOSERDAY: 'SELECT getCloserDay(?, ?) AS CloserDay',
+  SELECT_NEXTDATEOF: 'SELECT getNextDateOf(?) AS NextDateOf',
   // Client Order Details
   CREATE_CLIENTORDERDETAIL: 'CALL create_cltOrdDet(?, ?, ?)',
   SELECT_CLIENTORDERDETAILS: 'SELECT * FROM ClientOrderDetail',
