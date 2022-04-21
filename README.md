@@ -132,6 +132,7 @@ Se tiene un almacenamiento limitado por parte de la empresa CorreCaminos S.A, es
 > parameter = {product_id, quantity}
   
 > **Rellenar productos en stock**
+>
 > Estos tienen que estar registrados en stock previamente, de lo contrario, saltará un error.
 > 
 > ```console
@@ -151,12 +152,14 @@ Se tiene un almacenamiento limitado por parte de la empresa CorreCaminos S.A, es
 > Recordar nuevamente que un producto puede existir pero no necesariamente tiene que pertenecer al stock.
 
 > **Eliminar un producto del stock**
+>
 > Este elimina el producto completamente del stock.
 > ```console
 > http DELETE :3000/stock/:id
 > ```
 
 > **Quitar existencias de un producto en stock**
+>
 > Elimina cierta cantidad de productos que se encuentren registrados en stock de un producto en particular.
 >
 > ```console
@@ -166,6 +169,7 @@ Se tiene un almacenamiento limitado por parte de la empresa CorreCaminos S.A, es
 > Se puede eliminar la cantidad que se desee, considerando que el producto tenga suficientes existencias, no permitirá que el producto quede con una cantidad negativa.
 
 > **Registrar existencias de un producto en stock**
+>
 > Registra una cantidad específica de existencias de un producto en stock en particular.
 >
 > ```
@@ -225,6 +229,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > ```
 
 > **Obtener órdenes de los clientes**
+>
 > Estas son todas las órdenes registradas que se han hecho a la empresa proveniente de los clientes.
 >
 > ```console
@@ -241,6 +246,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > ```
   
 > **Actualizar una orden en concreto**
+>
 > Actualiza la información de la orden de un cliente.
 >
 > ```console
@@ -250,6 +256,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > Hay que tener cuidado con este endpoint en particular, los valores aceptados son {PENDIENTE, EN DESPACHO, COMPLETADO} podria generarse un error por este lado debido a que el sistema cambia el estado automáticamente dependiendo la circunstancia. Por lo que solo debe usarse para fines administrativos.
   
 > **Eliminar una orden en particular de un cliente**
+>
 > Permite eliminar una orden hecha anteriormente por un cliente.
 >
 > ```console
@@ -257,6 +264,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > ```
   
 > **Resumir la orden de un cliente**
+>
 > Este considera el caso de cuando una orden queda como **PENDIENTE**, cuando una orden queda como pendiente, no se realizan los cambios en el stock y la orden se guarda hasta que un administrador llame a este endpoint para volver a intentar despachar la orden. Esta función vuelve a revisar que todos los productos de la orden se encuentren disponibles en el stock, de ser así la orden pasa a estar **EN DESPACHO**, se quitan los productos del stock y queda lista para que se asigne el pedido a un conductor.
 >
 > ```console
@@ -266,6 +274,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > Como se puede intuir, solo se aceptan pedidos que tengan calidad de **PENDIENTE**.
   
 > **Obtener detalles de una orden de un cliente**
+>
 > Este endpoint permite ver todos los productos que estén asociados a una orden.
 >
 > ```console
@@ -291,6 +300,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > ```
   
 > **Obtener todas las órdenes de un cliente**
+>
 > Este retorna todas las órdenes hechas por un cliente en específico por su client_id.
 >
 > ```console
@@ -300,6 +310,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > parameter = {client_order_id, client_id, order_status, order_date, order_delivery_date}
 
 > **Crear una orden para un cliente**
+>
 > Permite abrir una nueva orden para un client en específico.
 >
 > ```console
@@ -309,6 +320,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > De igual forma se pueden agregar la cantidad de productos que desee
   
 > **Eliminar un día de entrega de un cliente**
+>
 > Todos los clientes tienen día o días (dependiendo del intervalo asignado) para las entregas de sus productos. Este endpoint permite eliminar un día de entrega asignado a un client previamente.
 >
 > ```
@@ -316,6 +328,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > ```
   
 > **Crear un nuevo día de entrega para un cliente**
+>
 > No crea un día de entrega como tal para el cliente, si no que le asigna al cliente un nuevo día para poder entregarle sus pedidos. Se tiene que considerar que los clientes pueden tener {1 o 2} días de entrega en total, se tiene que revisar bien si tiene o no días asignados para poder asignarle al cliente ese día en específico.
 >
 > ```
@@ -325,6 +338,7 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 > delivery_day_id = {1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday, 6: Saturday, 7: Friday}
   
 > **Obtener los días de entrega de un cliente**
+>
 > Retorna todos los días que tenga asignado un cliente para sus entregas.
 >
 > ```
@@ -337,14 +351,17 @@ Este endpoint manejará todas las acciones relacionadas a los clientes de la emp
 Estos permiten gestionar todo relacionado
   
 > **Obtener todos los días de entrega**
+>
 > En realidad, los días son {Monday: 1, Tuesday: 2, ...} pero bueno, se pueden ver con paginación y todo.
 >
 > ```
 > http GET :3000/delivery/day order=ASC pag=1 limit=10
 > ```
+>
 > No tiene parámetro de paginación.
   
 > **Obtener todos los días de entrega**
+>
 > En realidad, los días son {Monday: 1, Tuesday: 2, ...} pero bueno, se pueden ver con paginación y todo.
 >
 > ```
@@ -360,6 +377,7 @@ Estos permiten gestionar todo relacionado
 > ```
   
 > **Obtener todos los intervalos de entrega**
+>
 > Obtiene todos los intervalos de entrega para asignarlos a los clientes. Este afecta directamente a la cantidad de pedidos que reciben por semana.
 >
 > ```
@@ -424,6 +442,7 @@ Estos permiten gestionar todo relacionado
 Los tipos de conductor varian inicialmente entre {Promotor, Repartidor} pero se pueden agregar más.
 
 > **Obtener tipos de conductores**
+>
 > Obtiene todos los tipos de conductores registrados en el sistema con paginación.
 >
 > ```
@@ -431,6 +450,7 @@ Los tipos de conductor varian inicialmente entre {Promotor, Repartidor} pero se 
 > ```
   
 > **Crear un tipo de conductor**
+>
 > Crea un nuevo tipo de conductor.
 >
 > ```
@@ -467,6 +487,7 @@ Endpoint para gestionar todo lo que tenga que ver con los productos sean ajenos 
 > parameter = {product_id, product_name, supplier_id, product_cat_id, product_subcat_id, is_available}
   
 > **Crear un nuevo producto**
+>
 > Registrar un nuevo producto en el sistema, sin embargo, no lo registrar en el stock del cliente de manera automática.
 >
 > ```
@@ -617,6 +638,7 @@ Los proveedores son los que abastecen a la empresa, se le pueden hacer un pedido
 > ```
 
 > **Obtener todos los productos de un proveedor**
+>
 > Retorna todos los productos con paginación que ofrece un proveedor
 >
 > ```
@@ -626,6 +648,7 @@ Los proveedores son los que abastecen a la empresa, se le pueden hacer un pedido
 > parameter = {product_id, product_name, product_subcat_id, product_subcat_name, supplier_id, supplier_name, is_available}
   
 > **Obtener todas las ordenes hechas a un proveedor**
+>
 > Retorna todas las ordenes que a hecho la empresa a un proveedor en particular.
 >
 > ```
@@ -646,6 +669,7 @@ Maneja todos los vehiculos que estan registrados en la empresa.
 > parameter = {vehicle_id, car_brand, car_plaque, type_of_gas, purchase_date, gas_tank_capacity, gas_tank_status, last_tank_refill, kilometers_traveled}
   
 > **Registrar un nuevo vehiculo de la empresa**
+>
 > Es importate aclarar que los vehiclos no pueden tener una capacidad de tanque menor al estado actual. Sin mencionar que deben ser valores positivos al igual que los kilometros recorridos por el vehiculo.
 >
 > ```
@@ -660,6 +684,7 @@ Maneja todos los vehiculos que estan registrados en la empresa.
 >
   
 > **Actualizar un vehiculo en particular**
+>
 > Recordar que no se puede actualizar el vehiculo de modo que la capacidad maxima del tanque quede menor al estado actual. Tampoco se permite tener placas repetidas.
 >
 > ```
@@ -673,6 +698,7 @@ Maneja todos los vehiculos que estan registrados en la empresa.
 > ```
   
 > **Obtener el estado de un vehiculo en particular**
+>
 > Este permite el quartil actual del estado de la gasolina.
 > 
 > ```
@@ -680,6 +706,7 @@ Maneja todos los vehiculos que estan registrados en la empresa.
 > ```
   
 > **Llenar el tanque de un vehiculo en particular**
+>
 > Permite rellenar el tanque de gasolina con una cantidad especifica.
 > 
 > ```
@@ -689,6 +716,7 @@ Maneja todos los vehiculos que estan registrados en la empresa.
 > En caso de que sobrepase la capacidad máxima del vehículo, tomará dicha capacidad como estado actual. Se ignora el sobrante.
   
 > **Registrar kilometros a un vehículo en particular**
+>
 > Este no es vital utilizar, no se tiene que hacer de forma manual. Cuando se hace el pedido y se mandar al repartidor hace este cálculo y deducción de la gasolina automáticamente. Hay que tomar en cuenta que **1 kilómetro = 1 Litro de gasolina**, va a dar error si se sobrepasa.
 > 
 > ```
